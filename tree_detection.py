@@ -52,6 +52,59 @@ def parse_inputs():
     return options
 
 
+def train_test_net(net_name, verbose=1):
+    """
+
+    :param net_name:
+    :return:
+    """
+    # Init
+    c = color_codes()
+    options = parse_inputs()
+
+    # Data loading (or preparation)
+    d_path = options['val_dir']
+    gt_names = sorted(list(filter(
+        lambda x: not os.path.isdir(x) and re.search(options['lab_tag'], x),
+        os.listdir(d_path)
+    )))
+    n_folds = len(gt_names)
+    cases = [re.search(r'(\d+)', r).group() for r in gt_names]
+
+    print(
+        '%s[%s] %sStarting cross-validation (leave-one-mosaic-out)'
+        ' - %d mosaics%s' % (
+            c['c'], strftime("%H:%M:%S"), c['g'], n_folds, c['nc']
+        )
+    )
+    for i, c in enumerate(cases):
+        if verbose > 0:
+            print(
+                '%s[%s]%s Starting training for patient %s %s(%d/%d)%s' %
+                (
+                    c['c'], strftime("%H:%M:%S"),
+                    c['g'], c,
+                    c['c'], i + 1, len(cases), c['nc']
+                )
+            )
+
+        test_gt_name = gt_names[i]
+        test_dem_name = 'DEM{:}.jpg'.format(c)
+        test_mosaic_name = 'mosaic{:}.jpg'.format(c)
+
+        train_gt_names = gt_names[:i] + gt_names[i + 1:]
+        train_dem_names = [
+            'DEM{:}.jpg'.format(c_i)
+            for c_i in cases[:i] + cases[i + 1:]
+        ]
+        train_mosaic_names = [
+            'mosaic{:}.jpg'.format(c_i)
+            for c_i in cases[:i] + cases[i + 1:]
+        ]
+        print(test_gt_name, test_dem_name, test_mosaic_name)
+        print(train_gt_names, train_dem_names, train_mosaic_names)
+
+
 def main():
     # Init
     c = color_codes()
@@ -63,23 +116,9 @@ def main():
     )
 
     ''' <Detection task> '''
-    options = parse_inputs()
-    d_path = options['val_dir']
-    gt_names = list(filter(
-        lambda x: not os.path.isdir(x) and re.search(options['lab_tag'], x),
-        os.listdir(d_path)
-    ))
-    n_folds = len(gt_names)
-    print(
-        '%s[%s] %sStarting cross-validation (leave-one-mosaic-out)'
-        ' - %d mosaics%s' % (
-            c['c'], strftime("%H:%M:%S"), c['g'], n_folds, c['nc']
-        )
-    )
+    net_name = 'tree-detection.unet'
 
-    net_name = 'brats2019-gen'
-
-    train_test_seg(net_name, n_folds)
+    train_test_net(net_name)
 
 
 if __name__ == '__main__':

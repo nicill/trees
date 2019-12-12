@@ -77,20 +77,20 @@ def train_test_net(net_name, verbose=1):
             c['c'], strftime("%H:%M:%S"), c['g'], n_folds, c['nc']
         )
     )
-    for i, c in enumerate(cases):
+    for i, case in enumerate(cases):
         if verbose > 0:
             print(
                 '%s[%s]%s Starting training for patient %s %s(%d/%d)%s' %
                 (
                     c['c'], strftime("%H:%M:%S"),
-                    c['g'], c,
+                    c['g'], case,
                     c['c'], i + 1, len(cases), c['nc']
                 )
             )
 
         test_gt_name = gt_names[i]
-        test_dem_name = 'DEM{:}.jpg'.format(c)
-        test_mosaic_name = 'mosaic{:}.jpg'.format(c)
+        test_dem_name = 'DEM{:}.jpg'.format(case)
+        test_mosaic_name = 'mosaic{:}.jpg'.format(case)
 
         train_gt_names = gt_names[:i] + gt_names[i + 1:]
         train_dem_names = [

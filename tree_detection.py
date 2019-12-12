@@ -3,7 +3,7 @@ import os
 import re
 from time import strftime
 import numpy as np
-from data_manipulation.utils import color_codes
+from data_manipulation.utils import color_codes, find_file
 from matplotlib import image as mpimage
 
 
@@ -80,7 +80,7 @@ def train_test_net(net_name, verbose=1):
     for i, case in enumerate(cases):
         if verbose > 0:
             print(
-                '%s[%s]%s Starting training for patient %s %s(%d/%d)%s' %
+                '%s[%s]%s Starting training for mosaic %s %s(%d/%d)%s' %
                 (
                     c['c'], strftime("%H:%M:%S"),
                     c['g'], case,
@@ -101,8 +101,11 @@ def train_test_net(net_name, verbose=1):
             'mosaic{:}.jpg'.format(c_i)
             for c_i in cases[:i] + cases[i + 1:]
         ]
-        print(test_gt_name, test_dem_name, test_mosaic_name)
-        print(train_gt_names, train_dem_names, train_mosaic_names)
+        print(
+            find_file(test_gt_name, d_path),
+            find_file(test_dem_name, d_path),
+            find_file(test_mosaic_name, d_path)
+        )
 
 
 def main():

@@ -4,7 +4,7 @@ import re
 from time import strftime
 import numpy as np
 from data_manipulation.utils import color_codes, find_file
-from matplotlib import image as mpimage
+import cv2
 
 
 def parse_inputs():
@@ -92,20 +92,22 @@ def train_test_net(net_name, verbose=1):
         test_dem_name = 'DEM{:}.jpg'.format(case)
         test_mosaic_name = 'mosaic{:}.jpg'.format(case)
 
-        train_gt_names = gt_names[:i] + gt_names[i + 1:]
-        train_dem_names = [
-            'DEM{:}.jpg'.format(c_i)
+        train_y = [
+            cv2.imread(os.path.join(d_path, im))
+            for im in gt_names[:i] + gt_names[i + 1:]
+        ]
+        train_dems = [
+            cv2.imread(os.path.join(d_path, 'DEM{:}.jpg'.format(c_i)))
             for c_i in cases[:i] + cases[i + 1:]
         ]
-        train_mosaic_names = [
-            'mosaic{:}.jpg'.format(c_i)
+        train_mosaics = [
+            cv2.imread(os.path.join(d_path, 'mosaic{:}.jpg'.format(c_i)))
             for c_i in cases[:i] + cases[i + 1:]
         ]
-        print(
-            find_file(test_gt_name, d_path),
-            find_file(test_dem_name, d_path),
-            find_file(test_mosaic_name, d_path)
-        )
+        train_x = [
+            np.concatenate([mosaic[0], np.expand_dims(dem[0][..., 0], -1)], -1)
+            for mosaic, dem in zip(train_mosaics, train_dems)
+        ]
 
 
 def main():

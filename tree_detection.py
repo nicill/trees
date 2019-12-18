@@ -123,9 +123,9 @@ def train_test_net(net_name, verbose=1):
 
         val_split = 0.1
         batch_size = 32
-        patch_size = (256, 256)
-        overlap = (64, 64)
-        num_workers = 16
+        patch_size = (128, 128)
+        overlap = (32, 32)
+        num_workers = 2
         if val_split > 0:
             n_samples = len(train_x)
 

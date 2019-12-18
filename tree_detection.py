@@ -16,7 +16,7 @@ def parse_inputs():
 
     # Mode selector
     parser.add_argument(
-        '-v', '--mosaics-directory',
+        '-d', '--mosaics-directory',
         dest='val_dir', default='/home/mariano/Dropbox/DEM_Annotations',
         help='Directory containing the mosaics'
     )

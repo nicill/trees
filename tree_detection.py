@@ -1,10 +1,13 @@
 import argparse
 import os
 import re
-from time import strftime
-import numpy as np
-from data_manipulation.utils import color_codes, find_file
 import cv2
+import time
+import numpy as np
+from torch.utils.data import DataLoader
+from data_manipulation.utils import color_codes, find_file
+from datasets import Cropping2DDataset
+from models import  Unet2D
 
 
 def parse_inputs():
@@ -72,9 +75,33 @@ def train_test_net(net_name, verbose=1):
     cases = [re.search(r'(\d+)', r).group() for r in gt_names]
 
     print(
+            '%s[%s]%s Loading all mosaics and DEMs%s' %
+            (c['c'], time.strftime("%H:%M:%S"), c['g'], c['nc'])
+    )
+    y = [
+        (np.mean(cv2.imread(os.path.join(d_path, im)), axis=-1) < 2).astype(np.uint8)
+        for im in gt_names
+    ]
+    dems = [
+        cv2.imread(os.path.join(d_path, 'DEM{:}.jpg'.format(c_i)))
+        for c_i in cases
+    ]
+    mosaics = [
+        cv2.imread(os.path.join(d_path, 'mosaic{:}.jpg'.format(c_i)))
+        for c_i in cases
+    ]
+    x = [
+        np.moveaxis(
+            np.concatenate([mosaic, np.expand_dims(dem[..., 0], -1)], -1),
+            -1, 0
+        )
+        for mosaic, dem in zip(mosaics, dems)
+    ]
+
+    print(
         '%s[%s] %sStarting cross-validation (leave-one-mosaic-out)'
         ' - %d mosaics%s' % (
-            c['c'], strftime("%H:%M:%S"), c['g'], n_folds, c['nc']
+            c['c'], time.strftime("%H:%M:%S"), c['g'], n_folds, c['nc']
         )
     )
     for i, case in enumerate(cases):
@@ -82,32 +109,106 @@ def train_test_net(net_name, verbose=1):
             print(
                 '%s[%s]%s Starting training for mosaic %s %s(%d/%d)%s' %
                 (
-                    c['c'], strftime("%H:%M:%S"),
+                    c['c'], time.strftime("%H:%M:%S"),
                     c['g'], case,
                     c['c'], i + 1, len(cases), c['nc']
                 )
             )
 
-        test_gt_name = gt_names[i]
-        test_dem_name = 'DEM{:}.jpg'.format(case)
-        test_mosaic_name = 'mosaic{:}.jpg'.format(case)
+        test_y = y[i]
+        test_x = x[i]
 
-        train_y = [
-            cv2.imread(os.path.join(d_path, im))
-            for im in gt_names[:i] + gt_names[i + 1:]
-        ]
-        train_dems = [
-            cv2.imread(os.path.join(d_path, 'DEM{:}.jpg'.format(c_i)))
-            for c_i in cases[:i] + cases[i + 1:]
-        ]
-        train_mosaics = [
-            cv2.imread(os.path.join(d_path, 'mosaic{:}.jpg'.format(c_i)))
-            for c_i in cases[:i] + cases[i + 1:]
-        ]
-        train_x = [
-            np.concatenate([mosaic[0], np.expand_dims(dem[0][..., 0], -1)], -1)
-            for mosaic, dem in zip(train_mosaics, train_dems)
-        ]
+        train_y = y[:i] + y[i + 1:]
+        train_x = x[:i] + x[i + 1:]
+
+        val_split = 0.1
+        batch_size = 32
+        patch_size = (256, 256)
+        overlap = (64, 64)
+        num_workers = 16
+        if val_split > 0:
+            n_samples = len(train_x)
+
+            n_t_samples = int(n_samples * (1 - val_split))
+
+            d_train = train_x[:n_t_samples]
+            d_val = train_x[n_t_samples:]
+
+            l_train = train_y[:n_t_samples]
+            l_val = train_y[n_t_samples:]
+
+            print('Training dataset (with validation)')
+            train_dataset = Cropping2DDataset(
+                d_train, l_train, patch_size=patch_size, overlap=overlap
+            )
+
+            print('Validation dataset (with validation)')
+            val_dataset = Cropping2DDataset(
+                d_val, l_val, patch_size=patch_size, overlap=overlap
+            )
+        else:
+            print('Training dataset')
+            train_dataset = Cropping2DDataset(
+                train_x, train_y, patch_size=patch_size, overlap=overlap
+            )
+
+            print('Validation dataset')
+            val_dataset = Cropping2DDataset(
+                train_x, train_y, patch_size=patch_size, overlap=overlap
+            )
+
+        train_dataloader = DataLoader(
+            train_dataset, batch_size, True, num_workers=num_workers
+        )
+        val_dataloader = DataLoader(
+            val_dataset, batch_size, True
+        )
+
+        epochs = parse_inputs()['epochs']
+        patience = parse_inputs()['patience']
+        model_name = '{:}.mosaic{:}.mdl'.format(net_name, case)
+
+        net = Unet2D()
+
+        training_start = time.time()
+        try:
+            net.load_model(os.path.join(d_path, model_name))
+        except IOError:
+            if verbose > 0:
+                n_params = sum(
+                    p.numel() for p in net.parameters() if p.requires_grad
+                )
+                print(
+                    '%sStarting training with LesionMorph%s (%d parameters)' %
+                    (c['c'], c['nc'], n_params)
+                )
+            net.fit(
+                train_dataloader,
+                val_dataloader,
+                epochs=epochs,
+                patience=patience,
+            )
+
+            net.save_model(os.path.join(d_path, model_name))
+
+        if verbose > 0:
+            time_str = time.strftime(
+                '%H hours %M minutes %S seconds',
+                time.gmtime(time.time() - training_start)
+            )
+            print(
+                '%sTraining finished%s (total time %s)\n' %
+                (c['r'], c['nc'], time_str)
+            )
+
+            print(
+                '%s[%s]%s Starting testing with patient %s %s(%d/%d)%s' %
+                (
+                    c['c'], time.strftime("%H:%M:%S"),
+                    c['g'], case,
+                    c['c'], i + 1, len(cases), c['nc']
+                )
+            )
 
 
 def main():
@@ -116,7 +217,7 @@ def main():
 
     print(
         '%s[%s] %s<Tree detection pipeline>%s' % (
-            c['c'], strftime("%H:%M:%S"), c['y'], c['nc']
+            c['c'], time.strftime("%H:%M:%S"), c['y'], c['nc']
         )
     )
 

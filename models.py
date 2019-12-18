@@ -1,6 +1,9 @@
+import numpy as np
 import torch
+from torch import nn
 import torch.nn.functional as F
-from data_manipulation.models import Autoencoder, BaseModel
+from data_manipulation.models import BaseModel
+from data_manipulation.utils import to_torch_var
 
 
 class Autoencoder2D(BaseModel):
@@ -109,15 +112,15 @@ class Unet2D(BaseModel):
         self.device = device
 
         # <Parameter setup>
-        self.autoencoder = Autoencoder(
-            conv_filters, device, n_images * 2,
+        self.autoencoder = Autoencoder2D(
+            conv_filters, device, n_inputs,
         )
 
         self.seg = nn.Sequential(
             nn.Conv2d(conv_filters[0], conv_filters[0], 1),
             nn.ReLU(),
             nn.BatchNorm2d(conv_filters[0]),
-            nn.Conv2d(conv_filters[0], 2, 1)
+            nn.Conv2d(conv_filters[0], n_outputs, 1)
         )
         self.seg.to(device)
 

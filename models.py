@@ -1,9 +1,11 @@
+import itertools
+import time
 import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
 from data_manipulation.models import BaseModel
-from data_manipulation.utils import to_torch_var
+from data_manipulation.utils import to_torch_var, time_to_string
 
 
 class Autoencoder2D(BaseModel):
@@ -171,19 +173,64 @@ class Unet2D(BaseModel):
     ):
         # Init
         self.eval()
+        seg = list()
 
-        data_tensor = to_torch_var(data)
+        # Init
+        t_in = time.time()
 
-        with torch.no_grad():
-            torch.cuda.synchronize()
-            seg = self(data_tensor)
-            torch.cuda.synchronize()
-            torch.cuda.empty_cache()
+        for i, im in enumerate(data):
 
-        if verbose:
-            print(
-                '\033[K%sSegmentation finished' % ' '.join([''] * 12)
+            # Case init
+            t_case_in = time.time()
+
+            seg_i = np.zeros_like(im)
+
+            limits = tuple(
+                list(range(0, lim, 256))[:-1] + [lim] for lim in data.shape
             )
+            limits_product = list(itertools.product(
+                range(len(limits[0])), range(len(limits[1]))
+            ))
+            n_patches = len(limits_product)
+            for pi, (xi, xj) in enumerate(limits_product):
+                xslice = slice(limits[xi], limits[xi + 1])
+                yslice = slice(limits[xj], limits[xj + 1])
+                data_tensor = to_torch_var(
+                    np.expand_dims(data[xslice, yslice], axis=0)
+                )
 
-        seg = list(map(np.squeeze, seg.cpu().numpy()))
+                with torch.no_grad():
+                    torch.cuda.synchronize()
+                    out_i = np.squeeze(self(data_tensor).cpu().numpy())
+                    torch.cuda.synchronize()
+                    torch.cuda.empty_cache()
+
+                seg_i[xslice, yslice] = out_i
+
+                # Printing
+                init_c = '\033[0m' if self.training else '\033[38;5;238m'
+                whites = ' '.join([''] * 12)
+                percent = 20 * (i + 1) // len(data)
+                progress_s = ''.join(['-'] * percent)
+                remainder_s = ''.join([' '] * (20 - percent))
+
+                t_out = time.time() - t_in
+                t_case_out = time.time() - t_case_in
+                time_s = time_to_string(t_out)
+
+                t_eta = (t_case_out / (pi + 1)) * (n_patches - (pi + 1))
+                eta_s = time_to_string(t_eta)
+                batch_s = '{:}Case {:03} ({:03d}/{:03d}) [{:}>{:}] '.format(
+                    init_c + whites, self.epoch, pi + 1, n_patches,
+                    progress_s, remainder_s, time_s, eta_s + '\033[0m'
+                )
+                print('\033[K', end='', flush=True)
+                print(batch_s, end='\r', flush=True)
+
+            if verbose:
+                print(
+                    '\033[K%sSegmentation finished' % ' '.join([''] * 12)
+                )
+
+            seg.append(seg_i)
         return seg

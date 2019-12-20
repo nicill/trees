@@ -202,13 +202,16 @@ def train_test_net(net_name, verbose=1):
             )
 
             print(
-                '%s[%s]%s Starting testing with patient %s %s(%d/%d)%s' %
+                '%s[%s]%s Starting testing with mosaic %s %s(%d/%d)%s' %
                 (
                     c['c'], time.strftime("%H:%M:%S"),
                     c['g'], case,
                     c['c'], i + 1, len(cases), c['nc']
                 )
             )
+
+        y = net.test([test_x])[0]
+        cv2.imwrite(os.path.join(d_path, 'pred_' + case), y)
 
 
 def main():

@@ -126,47 +126,6 @@ def train_test_net(net_name, verbose=1):
         patch_size = (128, 128)
         overlap = (32, 32)
         num_workers = 1
-        if val_split > 0:
-            n_samples = len(train_x)
-
-            n_t_samples = int(n_samples * (1 - val_split))
-
-            d_train = train_x[:n_t_samples]
-            d_val = train_x[n_t_samples:]
-
-            l_train = train_y[:n_t_samples]
-            l_val = train_y[n_t_samples:]
-
-            print('Training dataset (with validation)')
-            train_dataset = Cropping2DDataset(
-                d_train, l_train, patch_size=patch_size, overlap=overlap
-            )
-
-            print('Validation dataset (with validation)')
-            val_dataset = Cropping2DDataset(
-                d_val, l_val, patch_size=patch_size, overlap=overlap
-            )
-        else:
-            print('Training dataset')
-            train_dataset = Cropping2DDataset(
-                train_x, train_y, patch_size=patch_size, overlap=overlap
-            )
-
-            print('Validation dataset')
-            val_dataset = Cropping2DDataset(
-                train_x, train_y, patch_size=patch_size, overlap=overlap
-            )
-
-        train_dataloader = DataLoader(
-            train_dataset, batch_size, True, num_workers=num_workers
-        )
-        val_dataloader = DataLoader(
-            val_dataset, batch_size, num_workers=num_workers
-        )
-
-        epochs = parse_inputs()['epochs']
-        patience = parse_inputs()['patience']
-        model_name = '{:}.mosaic{:}.mdl'.format(net_name, case)
 
         net = Unet2D()
 
@@ -174,6 +133,8 @@ def train_test_net(net_name, verbose=1):
         try:
             net.load_model(os.path.join(d_path, model_name))
         except IOError:
+
+            # Dataloader creation
             if verbose > 0:
                 n_params = sum(
                     p.numel() for p in net.parameters() if p.requires_grad
@@ -182,6 +143,49 @@ def train_test_net(net_name, verbose=1):
                     '%sStarting training with LesionMorph%s (%d parameters)' %
                     (c['c'], c['nc'], n_params)
                 )
+
+            if val_split > 0:
+                n_samples = len(train_x)
+
+                n_t_samples = int(n_samples * (1 - val_split))
+
+                d_train = train_x[:n_t_samples]
+                d_val = train_x[n_t_samples:]
+
+                l_train = train_y[:n_t_samples]
+                l_val = train_y[n_t_samples:]
+
+                print('Training dataset (with validation)')
+                train_dataset = Cropping2DDataset(
+                    d_train, l_train, patch_size=patch_size, overlap=overlap
+                )
+
+                print('Validation dataset (with validation)')
+                val_dataset = Cropping2DDataset(
+                    d_val, l_val, patch_size=patch_size, overlap=overlap
+                )
+            else:
+                print('Training dataset')
+                train_dataset = Cropping2DDataset(
+                    train_x, train_y, patch_size=patch_size, overlap=overlap
+                )
+
+                print('Validation dataset')
+                val_dataset = Cropping2DDataset(
+                    train_x, train_y, patch_size=patch_size, overlap=overlap
+                )
+
+            train_dataloader = DataLoader(
+                train_dataset, batch_size, True, num_workers=num_workers
+            )
+            val_dataloader = DataLoader(
+                val_dataset, batch_size, num_workers=num_workers
+            )
+
+            epochs = parse_inputs()['epochs']
+            patience = parse_inputs()['patience']
+            model_name = '{:}.mosaic{:}.mdl'.format(net_name, case)
+
             net.fit(
                 train_dataloader,
                 val_dataloader,
@@ -212,7 +216,7 @@ def train_test_net(net_name, verbose=1):
 
         y = net.test([test_x])[0]
         cv2.imwrite(
-            os.path.join(d_path, 'pred_top{:}.jpg'.format(case)),
+            os.path.join(d_path, 'pred_trees{:}.jpg'.format(case)),
             y.astype(np.uint8)
         )
 

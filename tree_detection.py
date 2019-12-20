@@ -127,6 +127,7 @@ def train_test_net(net_name, verbose=1):
         overlap = (32, 32)
         num_workers = 1
 
+        model_name = '{:}.mosaic{:}.mdl'.format(net_name, case)
         net = Unet2D()
 
         training_start = time.time()
@@ -184,7 +185,6 @@ def train_test_net(net_name, verbose=1):
 
             epochs = parse_inputs()['epochs']
             patience = parse_inputs()['patience']
-            model_name = '{:}.mosaic{:}.mdl'.format(net_name, case)
 
             net.fit(
                 train_dataloader,
@@ -214,10 +214,10 @@ def train_test_net(net_name, verbose=1):
                 )
             )
 
-        y = net.test([test_x])[0]
+        yi = net.test([test_x])[0]
         cv2.imwrite(
             os.path.join(d_path, 'pred_trees{:}.jpg'.format(case)),
-            y.astype(np.uint8)
+            yi.astype(np.uint8)
         )
 
 

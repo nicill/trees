@@ -8,6 +8,35 @@ from data_manipulation.models import BaseModel
 from data_manipulation.utils import to_torch_var, time_to_string
 
 
+def dsc_loss(pred, target, smooth=0.1):
+    """
+    Loss function based on a single class DSC metric.
+    :param pred: Predicted values. This tensor should have the shape:
+     [batch_size, n_classes, data_shape]
+    :param target: Ground truth values. This tensor can have multiple shapes:
+     - [batch_size, n_classes, data_shape]: This is the expected output since
+       it matches with the predicted tensor.
+     - [batch_size, data_shape]: In this case, the tensor is labeled with
+       values ranging from 0 to n_classes. We need to convert it to
+       categorical.
+    :param smooth: Parameter used to smooth the DSC when there are no positive
+     samples.
+    :return: The mean DSC for the batch
+    """
+    dims = pred.shape
+    assert target.shape == pred.shape,\
+        'Sizes between predicted and target do not match'
+    target = target.type_as(pred)
+
+    reduce_dims = tuple(range(1, len(dims)))
+    num = (2 * torch.sum(pred * target, dim=reduce_dims))
+    den = torch.sum(pred + target, dim=reduce_dims) + smooth
+    dsc_k = num / den
+    dsc = 1 - torch.mean(dsc_k)
+
+    return torch.clamp(dsc, 0., 1.)
+
+
 class Autoencoder2D(BaseModel):
     def __init__(
             self,
@@ -136,6 +165,11 @@ class Unet2D(BaseModel):
                     torch.squeeze(t, dim=1).type_as(p).to(p.device)
                 )
             },
+            {
+                'name': 'dsc',
+                'weight': 1,
+                'f': lambda p, t: dsc_loss(p, t)
+            },
         ]
         self.val_functions = [
             {
@@ -205,7 +239,7 @@ class Unet2D(BaseModel):
                     torch.cuda.synchronize()
                     torch.cuda.empty_cache()
 
-                seg_i[xslice, yslice] = out_i[1, ...] * 255
+                seg_i[xslice, yslice] = out_i[1, ...]
 
                 # Printing
                 init_c = '\033[0m' if self.training else '\033[38;5;238m'

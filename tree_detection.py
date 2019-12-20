@@ -125,7 +125,7 @@ def train_test_net(net_name, verbose=1):
         batch_size = 32
         patch_size = (128, 128)
         overlap = (32, 32)
-        num_workers = 2
+        num_workers = 1
         if val_split > 0:
             n_samples = len(train_x)
 
@@ -161,7 +161,7 @@ def train_test_net(net_name, verbose=1):
             train_dataset, batch_size, True, num_workers=num_workers
         )
         val_dataloader = DataLoader(
-            val_dataset, batch_size, True
+            val_dataset, batch_size, num_workers=num_workers
         )
 
         epochs = parse_inputs()['epochs']

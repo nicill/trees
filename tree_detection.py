@@ -141,7 +141,7 @@ def train_test_net(net_name, verbose=1):
                     p.numel() for p in net.parameters() if p.requires_grad
                 )
                 print(
-                    '%sStarting training with LesionMorph%s (%d parameters)' %
+                    '%sStarting training with a Unet 2D%s (%d parameters)' %
                     (c['c'], c['nc'], n_params)
                 )
 

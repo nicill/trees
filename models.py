@@ -168,7 +168,8 @@ class Unet2D(BaseModel):
             {
                 'name': 'dsc',
                 'weight': 1,
-                'f': lambda p, t: dsc_loss(p, t)
+                'f': lambda p, t: dsc_loss(
+                    torch.unsqueeze(p[:, 1, ...], 1), t)
             },
         ]
         self.val_functions = [
@@ -179,6 +180,12 @@ class Unet2D(BaseModel):
                     p[:, 1, ...],
                     torch.squeeze(t, dim=1).type_as(p).to(p.device)
                 )
+            },
+            {
+                'name': 'dsc',
+                'weight': 1,
+                'f': lambda p, t: dsc_loss(
+                    torch.unsqueeze(p[:, 1, ...], 1), t)
             },
         ]
 

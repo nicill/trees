@@ -186,7 +186,7 @@ class Unet2D(BaseModel):
             seg_i = np.zeros(im.shape[1:])
 
             limits = tuple(
-                list(range(0, lim, 128))[:-1] + [lim] for lim in im.shape[1:]
+                list(range(0, lim, 256))[:-1] + [lim] for lim in im.shape[1:]
             )
             limits_product = list(itertools.product(
                 range(len(limits[0]) - 1), range(len(limits[1]) - 1)
@@ -205,7 +205,7 @@ class Unet2D(BaseModel):
                     torch.cuda.synchronize()
                     torch.cuda.empty_cache()
 
-                seg_i[xslice, yslice] = out_i[1, ...]
+                seg_i[xslice, yslice] = out_i[1, ...] * 255
 
                 # Printing
                 init_c = '\033[0m' if self.training else '\033[38;5;238m'

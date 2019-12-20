@@ -211,7 +211,7 @@ def train_test_net(net_name, verbose=1):
             )
 
         y = net.test([test_x])[0]
-        cv2.imwrite(os.path.join(d_path, 'pred_' + case), y)
+        cv2.imwrite(os.path.join(d_path, 'pred_top{:}.jpg'.format(case)), y)
 
 
 def main():

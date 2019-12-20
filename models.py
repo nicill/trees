@@ -183,20 +183,20 @@ class Unet2D(BaseModel):
             # Case init
             t_case_in = time.time()
 
-            seg_i = np.zeros_like(im)
+            seg_i = np.zeros(im.shape[1:])
 
             limits = tuple(
-                list(range(0, lim, 256))[:-1] + [lim] for lim in data.shape
+                list(range(0, lim, 128))[:-1] + [lim] for lim in im.shape[1:]
             )
             limits_product = list(itertools.product(
-                range(len(limits[0])), range(len(limits[1]))
+                range(len(limits[0]) - 1), range(len(limits[1]) - 1)
             ))
             n_patches = len(limits_product)
             for pi, (xi, xj) in enumerate(limits_product):
-                xslice = slice(limits[xi], limits[xi + 1])
-                yslice = slice(limits[xj], limits[xj + 1])
+                xslice = slice(limits[0][xi], limits[0][xi + 1])
+                yslice = slice(limits[1][xj], limits[1][xj + 1])
                 data_tensor = to_torch_var(
-                    np.expand_dims(data[xslice, yslice], axis=0)
+                    np.expand_dims(im[slice(None), xslice, yslice], axis=0)
                 )
 
                 with torch.no_grad():
@@ -205,12 +205,12 @@ class Unet2D(BaseModel):
                     torch.cuda.synchronize()
                     torch.cuda.empty_cache()
 
-                seg_i[xslice, yslice] = out_i
+                seg_i[xslice, yslice] = out_i[1, ...]
 
                 # Printing
                 init_c = '\033[0m' if self.training else '\033[38;5;238m'
                 whites = ' '.join([''] * 12)
-                percent = 20 * (i + 1) // len(data)
+                percent = 20 * (pi + 1) // n_patches
                 progress_s = ''.join(['-'] * percent)
                 remainder_s = ''.join([' '] * (20 - percent))
 
@@ -220,8 +220,9 @@ class Unet2D(BaseModel):
 
                 t_eta = (t_case_out / (pi + 1)) * (n_patches - (pi + 1))
                 eta_s = time_to_string(t_eta)
-                batch_s = '{:}Case {:03} ({:03d}/{:03d}) [{:}>{:}] '.format(
-                    init_c + whites, self.epoch, pi + 1, n_patches,
+                batch_s = '{:}Case {:03}/{:03} ({:03d}/{:03d})' \
+                          ' [{:}>{:}] {:} ETA: {:}'.format(
+                    init_c + whites, i + 1, len(data), pi + 1, n_patches,
                     progress_s, remainder_s, time_s, eta_s + '\033[0m'
                 )
                 print('\033[K', end='', flush=True)

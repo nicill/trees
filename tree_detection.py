@@ -217,7 +217,7 @@ def train_test_net(net_name, verbose=1):
         yi = net.test([test_x])[0]
         cv2.imwrite(
             os.path.join(d_path, 'pred_trees{:}.jpg'.format(case)),
-            yi.astype(np.uint8)
+            (yi * 255).astype(np.uint8)
         )
 
 

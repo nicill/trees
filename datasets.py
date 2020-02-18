@@ -22,8 +22,8 @@ class Cropping2DDataset(Dataset):
             self.labels, self.patch_size, self.overlap
         )
         self.patch_slices = [
-            s for d, s in zip(self.labels, slices)
-            if np.sum(d[(slice(None, None),) + s]) > 0
+            [s for s in slices_i if np.sum(d[(slice(None, None),) + s]) > 0]
+            for d, slices_i in zip(self.labels, slices)
         ]
 
         self.max_slice = np.cumsum(list(map(len, self.patch_slices)))

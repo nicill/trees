@@ -23,13 +23,13 @@ def parse_inputs():
     parser.add_argument(
         '-e', '--epochs',
         dest='epochs',
-        type=int,  default=10,
+        type=int,  default=20,
         help='Number of epochs'
     )
     parser.add_argument(
         '-p', '--patience',
         dest='patience',
-        type=int, default=2,
+        type=int, default=5,
         help='Patience for early stopping'
     )
     parser.add_argument(

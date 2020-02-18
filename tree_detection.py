@@ -98,8 +98,8 @@ def train_test_net(net_name, verbose=1):
         for mosaic, dem in zip(mosaics, dems)
     ]
 
-    mean_x = [np.mean(xi, axis=-1) for xi in x]
-    std_x = [np.std(xi, axis=-1) for xi in x]
+    mean_x = [np.mean(xi.reshape(4, -1), axis=-1) for xi in x]
+    std_x = [np.std(xi.reshape(4, -1), axis=-1) for xi in x]
 
     norm_x = [
         (xi - meani) / stdi for xi, meani, stdi in zip(x, mean_x, std_x)

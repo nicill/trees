@@ -98,6 +98,13 @@ def train_test_net(net_name, verbose=1):
         for mosaic, dem in zip(mosaics, dems)
     ]
 
+    mean_x = [np.mean(xi, axis=-1) for xi in x]
+    std_x = [np.std(xi, axis=-1) for xi in x]
+
+    norm_x = [
+        (xi - meani) / stdi for xi, meani, stdi in zip(x, mean_x, std_x)
+    ]
+
     print(
         '%s[%s] %sStarting cross-validation (leave-one-mosaic-out)'
         ' - %d mosaics%s' % (
@@ -116,10 +123,10 @@ def train_test_net(net_name, verbose=1):
             )
 
         test_y = y[i]
-        test_x = x[i]
+        test_x = norm_x[i]
 
         train_y = y[:i] + y[i + 1:]
-        train_x = x[:i] + x[i + 1:]
+        train_x = norm_x[:i] + norm_x[i + 1:]
 
         val_split = 0.1
         batch_size = 32

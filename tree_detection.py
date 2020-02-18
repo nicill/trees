@@ -102,7 +102,8 @@ def train_test_net(net_name, verbose=1):
     std_x = [np.std(xi.reshape(4, -1), axis=-1) for xi in x]
 
     norm_x = [
-        (xi - meani) / stdi for xi, meani, stdi in zip(x, mean_x, std_x)
+        (xi - meani.reshape(-1, 1, 1)) / stdi.reshape(-1, 1, 1)
+        for xi, meani, stdi in zip(x, mean_x, std_x)
     ]
 
     print(

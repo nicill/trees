@@ -3,13 +3,6 @@ from torch.utils.data.dataset import Dataset
 from data_manipulation.datasets import get_slices_bb
 
 
-def filter_slices(data, slices):
-    slices = [
-        s for d, s in zip(data, slices)
-        if np.sum(d[(slice(None, None),) + s]) > 0
-    ]
-
-
 class Cropping2DDataset(Dataset):
     def __init__(
             self,
@@ -29,7 +22,7 @@ class Cropping2DDataset(Dataset):
             self.labels, self.patch_size, self.overlap
         )
         self.patch_slices = [
-            s for d, s in zip(data, slices)
+            s for d, s in zip(self.labels, slices)
             if np.sum(d[(slice(None, None),) + s]) > 0
         ]
 

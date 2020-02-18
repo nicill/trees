@@ -90,15 +90,16 @@ def train_test_net(net_name, verbose=1):
         cv2.imread(os.path.join(d_path, 'mosaic{:}.jpg'.format(c_i)))
         for c_i in cases
     ]
-    hsv_mosaics = [
-        cv2.cvtColor(mosaic, cv2.COLOR_BGR2HSV) for mosaic in mosaics
-    ]
+    # hsv_mosaics = [
+    #     cv2.cvtColor(mosaic, cv2.COLOR_BGR2HSV) for mosaic in mosaics
+    # ]
     x = [
         np.moveaxis(
             np.concatenate([mosaic, np.expand_dims(dem[..., 0], -1)], -1),
             -1, 0
         )
-        for mosaic, dem in zip(hsv_mosaics, dems)
+        # for mosaic, dem in zip(hsv_mosaics, dems)
+        for mosaic, dem in zip(mosaics, dems)
     ]
 
     mean_x = [np.mean(xi.reshape(4, -1), axis=-1) for xi in x]

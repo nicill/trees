@@ -192,8 +192,8 @@ class Unet2D(BaseModel):
         # <Optimizer setup>
         # We do this last setp after all parameters are defined
         model_params = filter(lambda p: p.requires_grad, self.parameters())
-        self.optimizer_alg = torch.optim.Adadelta(model_params)
-        # self.optimizer_alg = torch.optim.Adam(model_params, lr=1e-1)
+        # self.optimizer_alg = torch.optim.Adadelta(model_params)
+        self.optimizer_alg = torch.optim.Adam(model_params, lr=1e-1)
         # self.optimizer_alg = torch.optim.SGD(model_params, lr=1e-1)
         # self.autoencoder.dropout = 0.99
         # self.dropout = 0.99

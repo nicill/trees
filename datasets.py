@@ -6,7 +6,7 @@ from data_manipulation.datasets import get_slices_bb
 class Cropping2DDataset(Dataset):
     def __init__(
             self,
-            data, labels, patch_size=32, overlap=16
+            data, labels, patch_size=32, overlap=16, filtered=False
     ):
         # Init
         self.data = data
@@ -21,10 +21,13 @@ class Cropping2DDataset(Dataset):
         slices = get_slices_bb(
             self.labels, self.patch_size, self.overlap
         )
-        self.patch_slices = [
-            [s for s in slices_i if np.sum(label[s]) > 0]
-            for label, slices_i in zip(self.labels, slices)
-        ]
+        if filter:
+            self.patch_slices = [
+                [s for s in slices_i if np.sum(label[s]) > 0]
+                for label, slices_i in zip(self.labels, slices)
+            ]
+        else:
+            self.patch_slices = slices
 
         self.max_slice = np.cumsum(list(map(len, self.patch_slices)))
 

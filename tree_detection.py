@@ -174,7 +174,8 @@ def train_test_net(net_name, verbose=1):
 
                 print('Validation dataset (with validation)')
                 val_dataset = Cropping2DDataset(
-                    d_val, l_val, patch_size=patch_size, overlap=overlap
+                    d_val, l_val, patch_size=patch_size, overlap=overlap,
+                    filtered=True
                 )
             else:
                 print('Training dataset')
@@ -184,7 +185,8 @@ def train_test_net(net_name, verbose=1):
 
                 print('Validation dataset')
                 val_dataset = Cropping2DDataset(
-                    train_x, train_y, patch_size=patch_size, overlap=overlap
+                    train_x, train_y, patch_size=patch_size, overlap=overlap,
+                    filtered=True
                 )
 
             train_dataloader = DataLoader(

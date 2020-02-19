@@ -105,11 +105,11 @@ def train_test_net(net_name, verbose=1):
     #     for mosaic, dem in zip(mosaics, dems)
     # ]
 
-    mean_x = [np.mean(xi.reshape(len(xi), -1), axis=-1) for xi in x]
-    std_x = [np.std(xi.reshape(len(xi), -1), axis=-1) for xi in x]
+    mean_x = [np.mean(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
+    std_x = [np.std(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
 
     norm_x = [
-        (xi - meani.reshape(-1, 1, 1)) / stdi.reshape(-1, 1, 1)
+        (xi - meani.reshape((-1, 1, 1))) / stdi.reshape((-1, 1, 1))
         for xi, meani, stdi in zip(x, mean_x, std_x)
     ]
 
@@ -143,7 +143,7 @@ def train_test_net(net_name, verbose=1):
         num_workers = 1
 
         model_name = '{:}.mosaic{:}.mdl'.format(net_name, case)
-        net = Unet2D()
+        net = Unet2D(n_inputs=len(norm_x[0]))
 
         training_start = time.time()
         try:

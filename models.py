@@ -62,6 +62,7 @@ class Autoencoder2D(BaseModel):
                     padding=kernel_size // 2,
                 ),
                 nn.ReLU(),
+                nn.BatchNorm2d(f_out)
             ) for f_in, f_out in zip(
                 [n_inputs] + conv_filters[:-2], conv_filters[:-1]
             )
@@ -73,6 +74,7 @@ class Autoencoder2D(BaseModel):
                 padding=kernel_size // 2
             ),
             nn.ReLU(),
+            nn.BatchNorm2d(conv_filters[-1])
         )
 
         # Up path
@@ -86,6 +88,7 @@ class Autoencoder2D(BaseModel):
                     padding=kernel_size // 2
                 ),
                 nn.ReLU(),
+                nn.BatchNorm2d(f_out)
             ) for f_in, f_out in zip(
                 deconv_in, down_out
             )

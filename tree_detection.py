@@ -68,7 +68,7 @@ def train_test_net(net_name, verbose=1):
     # Data loading (or preparation)
     d_path = options['val_dir']
     gt_names = sorted(list(filter(
-        lambda x: not os.path.isdir(x) and re.search(options['lab_tag'], x),
+        lambda xi: not os.path.isdir(xi) and re.search(options['lab_tag'], xi),
         os.listdir(d_path)
     )))
     n_folds = len(gt_names)
@@ -79,7 +79,10 @@ def train_test_net(net_name, verbose=1):
             (c['c'], time.strftime("%H:%M:%S"), c['g'], c['nc'])
     )
     y = [
-        (np.mean(cv2.imread(os.path.join(d_path, im)), axis=-1) < 2).astype(np.uint8)
+        (
+                np.mean(
+                    cv2.imread(os.path.join(d_path, im)), axis=-1) < 2
+        ).astype(np.uint8)
         for im in gt_names
     ]
     dems = [
@@ -90,13 +93,15 @@ def train_test_net(net_name, verbose=1):
         cv2.imread(os.path.join(d_path, 'mosaic{:}.jpg'.format(c_i)))
         for c_i in cases
     ]
-    # hsv_mosaics = [
-    #     cv2.cvtColor(mosaic, cv2.COLOR_BGR2HSV) for mosaic in mosaics
-    # ]
-    # x = [
-    #     np.stack([mosaic[..., 0], mosaic[..., 1], dem[..., 0]], 0)
-    #     for mosaic, dem in zip(hsv_mosaics, dems)
-    # ]
+    hsv_mosaics = [
+        cv2.cvtColor(mosaic, cv2.COLOR_BGR2HSV) for mosaic in mosaics
+    ]
+    hsv_mosaics = [
+        np.stack([mosaic[..., 0], mosaic[..., 1], dem[..., 0]], 0)
+        for mosaic, dem in zip(hsv_mosaics, dems)
+    ]
+    for mi, c_i in zip(hsv_mosaics, cases):
+        cv2.imwrite(os.path.join(d_path, 'hsv_mosaic{:}.jpg'.format(c_i)), mi)
     x = [
         np.moveaxis(
             np.concatenate([mosaic, np.expand_dims(dem[..., 0], -1)], -1),

@@ -97,7 +97,7 @@ def train_test_net(net_name, verbose=1):
         cv2.cvtColor(mosaic, cv2.COLOR_BGR2HSV) for mosaic in mosaics
     ]
     hsv_mosaics = [
-        np.stack([mosaic[..., 0], mosaic[..., 1], dem[..., 0]], 0)
+        np.stack([mosaic[..., 0], mosaic[..., 1], dem[..., 0]], -1)
         for mosaic, dem in zip(hsv_mosaics, dems)
     ]
     for mi, c_i in zip(hsv_mosaics, cases):

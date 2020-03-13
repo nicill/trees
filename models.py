@@ -59,6 +59,7 @@ def positive_uncertainty_loss(
     :param base: Base function for the flip loss.
     :return: The flip loss given a base loss function
     """
+    print(pred.shape, target.shape, q.shape)
     norm_q = q * q_factor
     z = (pred < 0.5).type_as(pred) * target
     q_target = (1 - target) * norm_q + target * (1 - norm_q)

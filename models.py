@@ -222,7 +222,9 @@ class Unet2D(BaseModel):
                 'name': 'unc',
                 'weight': 1,
                 'f': lambda p, t: positive_uncertainty_loss(
-                    p[0], torch.squeeze(t, dim=1).type_as(p).to(p.device), p[1]
+                    p[0],
+                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
+                    p[1]
                 )
             },
         ]

@@ -7,7 +7,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 from data_manipulation.utils import color_codes, find_file
 from datasets import Cropping2DDataset
-from models import  Unet2D
+from models import Unet2D
 
 
 def parse_inputs():

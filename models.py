@@ -276,7 +276,7 @@ class Unet2D(BaseModel):
         input_s = self.autoencoder(input_s)
         multi_seg = torch.sigmoid(self.seg(input_s))
 
-        unc = torch.sigmoid(self.seg(input_s))
+        unc = torch.sigmoid(self.unc(input_s))
 
         return multi_seg, unc
 

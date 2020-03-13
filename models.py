@@ -213,6 +213,18 @@ class Unet2D(BaseModel):
                 )
             },
             {
+                'name': 'dp xe',
+                'weight': 1,
+                'f': lambda p, t: focal_loss(
+                    torch.squeeze(p[2], dim=1),
+                    torch.squeeze(
+                        F.max_pool2d(t, 2 * len(self.autoencoder.down)),
+                        dim=1
+                    ).type_as(p[0]).to(p[0].device),
+                    alpha=0.5
+                )
+            },
+            {
                 'name': 'dsc',
                 'weight': 1,
                 'f': lambda p, t: dsc_loss(p[0], t)
@@ -272,13 +284,28 @@ class Unet2D(BaseModel):
         # self.dropout = 0.99
         # self.ann_rate = 1e-2
 
-    def forward(self, input_s):
-        input_s = self.autoencoder(input_s)
+    def forward(self, input_ae):
+        input_s = self.autoencoder(input_ae)
+
+        #  Deep supervision
+        for c in self.autoencoder.down:
+            input_ae = F.dropout2d(
+                c(input_ae),
+                self.autoencoder.dropout,
+                self.autoencoder.training
+            )
+            input_ae = F.max_pool2d(input_ae, 2)
+        input_ae = F.dropout2d(
+            self.autoencoder.u(input_ae),
+            self.autoencoder.dropout,
+            self.autoencoder.training
+        )
+
         multi_seg = torch.sigmoid(self.seg(input_s))
-
         unc = torch.sigmoid(self.unc(input_s))
+        low_seg = torch.sigmoid(self.seg(input_ae))
 
-        return multi_seg, unc
+        return multi_seg, unc, low_seg
 
     def dropout_update(self):
         super().dropout_update()

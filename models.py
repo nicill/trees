@@ -239,6 +239,17 @@ class Unet2D(BaseModel):
                 'f': lambda p, t: dsc_loss(p[0], t)
             },
             {
+                'name': 'dp dsc',
+                'weight': 1,
+                'f': lambda p, t: dsc_loss(
+                    p[2],
+                    F.max_pool2d(
+                        t.type_as(p[2]),
+                        2 ** len(self.autoencoder.down)
+                    ).to(p[2].device)
+                )
+            },
+            {
                 'name': 'unc',
                 'weight': 1,
                 'f': lambda p, t: flip_loss(

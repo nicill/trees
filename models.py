@@ -6,6 +6,7 @@ from torch import nn
 import torch.nn.functional as F
 from data_manipulation.models import BaseModel
 from data_manipulation.utils import to_torch_var, time_to_string
+from data_manipulation.criterions import flip_loss, focal_loss
 
 
 def dsc_loss(pred, target, smooth=0.1):
@@ -204,7 +205,7 @@ class Unet2D(BaseModel):
             {
                 'name': 'xentr',
                 'weight': 1,
-                'f': lambda p, t: F.binary_cross_entropy(
+                'f': lambda p, t: focal_loss(
                     torch.squeeze(p[0], dim=1),
                     torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device)
                 )
@@ -217,11 +218,12 @@ class Unet2D(BaseModel):
             {
                 'name': 'unc',
                 'weight': 1,
-                'f': lambda p, t: positive_uncertainty_loss(
+                'f': lambda p, t: flip_loss(
                     torch.squeeze(p[0], dim=1),
                     torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
                     torch.squeeze(p[1], dim=1),
-                    q_factor=1
+                    q_factor=1,
+                    base=focal_loss
                 )
             },
         ]
@@ -229,7 +231,7 @@ class Unet2D(BaseModel):
             {
                 'name': 'xentr',
                 'weight': 1,
-                'f': lambda p, t: F.binary_cross_entropy(
+                'f': lambda p, t: focal_loss(
                     torch.squeeze(p[0], dim=1),
                     torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device)
                 )

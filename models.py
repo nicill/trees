@@ -225,9 +225,11 @@ class Unet2D(BaseModel):
                 'f': lambda p, t: focal_loss(
                     torch.squeeze(p[2], dim=1),
                     torch.squeeze(
-                        F.max_pool2d(t, 2 * len(self.autoencoder.down)),
+                        F.max_pool2d(
+                            t.type_as(p[2]),
+                            2 * len(self.autoencoder.down)),
                         dim=1
-                    ).type_as(p[0]).to(p[0].device),
+                    ).type_as(p[2]).to(p[2].device),
                     alpha=0.5
                 )
             },

@@ -205,17 +205,13 @@ class Unet2D(BaseModel):
                 'name': 'xtop',
                 'weight': 1,
                 'f': lambda p, t: F.binary_cross_entropy(
-                    p[0], torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device)
+                    torch.squeeze(p[0], dim=1),
+                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device)
                 )
             },
             {
-                'name': 'dtop',
-                'weight': 0.5,
-                'f': lambda p, t: dsc_loss(p[0], t)
-            },
-            {
                 'name': 'dbck',
-                'weight': 0.5,
+                'weight': 1,
                 'f': lambda p, t: dsc_loss(1 - p[0], t == 0)
             },
             {
@@ -224,7 +220,8 @@ class Unet2D(BaseModel):
                 'f': lambda p, t: positive_uncertainty_loss(
                     torch.squeeze(p[0], dim=1),
                     torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
-                    torch.squeeze(p[1], dim=1)
+                    torch.squeeze(p[1], dim=1),
+                    q_factor=1
                 )
             },
         ]
@@ -233,7 +230,8 @@ class Unet2D(BaseModel):
                 'name': 'xentr',
                 'weight': 1,
                 'f': lambda p, t: F.binary_cross_entropy(
-                    p[0], torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device)
+                    torch.squeeze(p[0], dim=1),
+                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device)
                 )
             },
             {
@@ -241,13 +239,28 @@ class Unet2D(BaseModel):
                 'weight': 1,
                 'f': lambda p, t: dsc_loss(p[0], t)
             },
+            {
+                'name': 'μ unc',
+                'weight': 0,
+                'f': lambda p, t: torch.mean(p[1])
+            },
+            {
+                'name': 'unc',
+                'weight': 0,
+                'f': lambda p, t: torch.min(p[1])
+            },
+            {
+                'name': 'UNC',
+                'weight': 0,
+                'f': lambda p, t: torch.max(p[1])
+            },
         ]
 
         # <Optimizer setup>
-        # We do this last setp after all parameters are defined
+        # We do this last step after all parameters are defined
         model_params = filter(lambda p: p.requires_grad, self.parameters())
         # self.optimizer_alg = torch.optim.Adadelta(model_params)
-        self.optimizer_alg = torch.optim.Adam(model_params, lr=1e-2)
+        self.optimizer_alg = torch.optim.Adam(model_params)
         # self.optimizer_alg = torch.optim.SGD(model_params, lr=1e-1)
         # self.autoencoder.dropout = 0.99
         # self.dropout = 0.99

@@ -227,7 +227,7 @@ class Unet2D(BaseModel):
                     torch.squeeze(
                         F.max_pool2d(
                             t.type_as(p[2]),
-                            2 * len(self.autoencoder.down)),
+                            2 ** len(self.autoencoder.down)),
                         dim=1
                     ).to(p[2].device),
                     alpha=0.5

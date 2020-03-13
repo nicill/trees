@@ -147,7 +147,7 @@ class Unet2D(BaseModel):
 
         # <Parameter setup>
         self.autoencoder = Autoencoder2D(
-            conv_filters, device, n_inputs,
+            conv_filters, device, n_inputs, pooling=True
         )
 
         self.seg = nn.Sequential(

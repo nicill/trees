@@ -213,7 +213,7 @@ class Unet2D(BaseModel):
             {
                 'name': 'dsc',
                 'weight': 1,
-                'f': lambda p, t: dsc_loss(1 - p[0], t == 0)
+                'f': lambda p, t: dsc_loss(p[0], t)
             },
             {
                 'name': 'unc',

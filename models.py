@@ -12,7 +12,7 @@ def dsc_loss(pred, target, smooth=0.1):
     """
     Loss function based on a single class DSC metric.
     :param pred: Predicted values. This tensor should have the shape:
-     [batch_size, n_classes, data_shape]
+     [batch_size, data_shape]
     :param target: Ground truth values. This tensor can have multiple shapes:
      - [batch_size, n_classes, data_shape]: This is the expected output since
        it matches with the predicted tensor.
@@ -35,6 +35,39 @@ def dsc_loss(pred, target, smooth=0.1):
     dsc = 1 - torch.mean(dsc_k)
 
     return torch.clamp(dsc, 0., 1.)
+
+
+def positive_uncertainty_loss(
+        pred, target, q, q_factor=0.5, base=F.binary_cross_entropy
+):
+    """
+    Flip loss function for the positive labels based on:
+    Richard McKinley, Michael Rebsamen, Raphael Meier, Mauricio Reyes,
+    Christian Rummel and Roland Wiest. "Few-shot brain segmentation from weakly
+    labeled data with deep heteroscedastic multi-task network".
+    https://arxiv.org/abs/1904.02436
+    The idea is to allow for mislabeling inside the labeled are (since the area
+    of the annotation is arbitrary, but the location of it is right). Otherwise
+    the background label is correct.
+    :param pred: Predicted values. The shape of the tensor should be related
+     to the base function.
+    :param target: Ground truth values. The shape of the tensor should be
+     related to the base function.
+    :param q: Uncertainty output from the network. The shape of the tensor
+     should be related to the base function.
+    :param q_factor: Factor to normalise the value of q.
+    :param base: Base function for the flip loss.
+    :return: The flip loss given a base loss function
+    """
+    norm_q = q * q_factor
+    z = (pred < 0.5).type_as(pred) * target
+    q_target = (1 - target) * norm_q + target * (1 - norm_q)
+    loss_seg = base(pred, q_target.type_as(pred).detach())
+    loss_uncertainty = base(norm_q, z.detach())
+
+    final_loss = loss_seg + loss_uncertainty
+
+    return final_loss
 
 
 class Autoencoder2D(BaseModel):
@@ -136,7 +169,7 @@ class Unet2D(BaseModel):
             self,
             conv_filters=list([32, 64, 128, 256]),
             device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
-            n_inputs=4, n_outputs=2
+            n_inputs=4, n_outputs=1
     ):
         super(Unet2D, self).__init__()
         # Init values
@@ -158,27 +191,39 @@ class Unet2D(BaseModel):
         )
         self.seg.to(device)
 
+        self.unc = nn.Sequential(
+            nn.Conv2d(conv_filters[0], conv_filters[0], 1),
+            nn.ReLU(),
+            nn.BatchNorm2d(conv_filters[0]),
+            nn.Conv2d(conv_filters[0], n_outputs, 1)
+        )
+        self.unc.to(device)
+
         # <Loss function setup>
         self.train_functions = [
             {
-                'name': 'xetop',
+                'name': 'xtop',
                 'weight': 1,
                 'f': lambda p, t: F.binary_cross_entropy(
-                    p[:, 1, ...],
-                    torch.squeeze(t, dim=1).type_as(p).to(p.device)
+                    p[0], torch.squeeze(t, dim=1).type_as(p).to(p.device)
                 )
             },
             {
                 'name': 'dtop',
                 'weight': 0.5,
-                'f': lambda p, t: dsc_loss(
-                    torch.unsqueeze(p[:, 1, ...], 1), t)
+                'f': lambda p, t: dsc_loss(p[0], t)
             },
             {
                 'name': 'dbck',
                 'weight': 0.5,
-                'f': lambda p, t: dsc_loss(
-                    torch.unsqueeze(p[:, 0, ...], 1), t == 0)
+                'f': lambda p, t: dsc_loss(1 - p[0], t == 0)
+            },
+            {
+                'name': 'unc',
+                'weight': 1,
+                'f': lambda p, t: positive_uncertainty_loss(
+                    p[0], torch.squeeze(t, dim=1).type_as(p).to(p.device), p[1]
+                )
             },
         ]
         self.val_functions = [
@@ -186,15 +231,13 @@ class Unet2D(BaseModel):
                 'name': 'xentr',
                 'weight': 1,
                 'f': lambda p, t: F.binary_cross_entropy(
-                    p[:, 1, ...],
-                    torch.squeeze(t, dim=1).type_as(p).to(p.device)
+                    p[0], torch.squeeze(t, dim=1).type_as(p).to(p.device)
                 )
             },
             {
                 'name': 'dsc',
                 'weight': 1,
-                'f': lambda p, t: dsc_loss(
-                    torch.unsqueeze(p[:, 1, ...], 1), t)
+                'f': lambda p[0], t: dsc_loss(p, t)
             },
         ]
 
@@ -210,9 +253,11 @@ class Unet2D(BaseModel):
 
     def forward(self, input_s):
         input_s = self.autoencoder(input_s)
-        multi_seg = torch.softmax(self.seg(input_s), dim=1)
+        multi_seg = torch.sigmoid(self.seg(input_s))
 
-        return multi_seg
+        unc = torch.sigmoid(self.seg(input_s))
+
+        return multi_seg, unc
 
     def dropout_update(self):
         super().dropout_update()
@@ -224,6 +269,7 @@ class Unet2D(BaseModel):
         # Init
         self.eval()
         seg = list()
+        unc = list()
 
         # Init
         t_in = time.time()
@@ -234,6 +280,7 @@ class Unet2D(BaseModel):
             t_case_in = time.time()
 
             seg_i = np.zeros(im.shape[1:])
+            unc_i = np.zeros(im.shape[1:])
 
             limits = tuple(
                 list(range(0, lim, 256))[:-1] + [lim] for lim in im.shape[1:]
@@ -251,11 +298,12 @@ class Unet2D(BaseModel):
 
                 with torch.no_grad():
                     torch.cuda.synchronize()
-                    out_i = np.squeeze(self(data_tensor).cpu().numpy())
+                    seg_pi, unc_pi = self(data_tensor)
                     torch.cuda.synchronize()
                     torch.cuda.empty_cache()
 
-                seg_i[xslice, yslice] = out_i[1, ...]
+                seg_i[xslice, yslice] = np.squeeze(seg_pi.cpu().numpy())
+                unc_i[xslice, yslice] = np.squeeze(unc_pi.cpu().numpy())
 
                 # Printing
                 init_c = '\033[0m' if self.training else '\033[38;5;238m'
@@ -284,4 +332,5 @@ class Unet2D(BaseModel):
                 )
 
             seg.append(seg_i)
-        return seg
+            unc.append(unc_i)
+        return seg, unc

@@ -258,7 +258,6 @@ class Unet2D(BaseModel):
         self.acc_functions = [
             {
                 'name': 'UNC',
-                'weight': 0,
                 'f': lambda p, t: torch.max(p[1])
             },
         ]

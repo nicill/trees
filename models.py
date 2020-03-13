@@ -302,12 +302,12 @@ class Unet2D(BaseModel):
                 self.autoencoder.training
             )
             input_ae = F.max_pool2d(input_ae, 2)
-        input_ae = self.deep_seg(input_ae)
         input_ae = F.dropout2d(
             self.autoencoder.u(input_ae),
             self.autoencoder.dropout,
             self.autoencoder.training
         )
+        input_ae = self.deep_seg(input_ae)
 
         multi_seg = torch.sigmoid(self.seg(input_s))
         unc = torch.sigmoid(self.unc(input_s))
@@ -346,8 +346,8 @@ class Unet2D(BaseModel):
             ))
             n_patches = len(limits_product)
             for pi, (xi, xj) in enumerate(limits_product):
-                xslice = slice(limits[0][xi], limits[0][xi + 1])
-                yslice = slice(limits[1][xj], limits[1][xj + 1])
+                xslice = slice(limits[0][xi], limits[0][xi + 1] + 1)
+                yslice = slice(limits[1][xj], limits[1][xj + 1] + 1)
                 data_tensor = to_torch_var(
                     np.expand_dims(im[slice(None), xslice, yslice], axis=0)
                 )

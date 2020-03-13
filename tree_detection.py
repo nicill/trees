@@ -236,14 +236,14 @@ def train_test_net(net_name, verbose=1):
                 )
             )
 
-        yi, unci = net.test([test_x])[0]
+        yi, unci = net.test([test_x])
         cv2.imwrite(
             os.path.join(d_path, 'pred_trees{:}.jpg'.format(case)),
-            (yi * 255).astype(np.uint8)
+            (yi[0] * 255).astype(np.uint8)
         )
         cv2.imwrite(
             os.path.join(d_path, 'unc_trees{:}.jpg'.format(case)),
-            (unci * 255).astype(np.uint8)
+            (unci[0] * 255).astype(np.uint8)
         )
 
 

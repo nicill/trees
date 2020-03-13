@@ -59,7 +59,6 @@ def positive_uncertainty_loss(
     :param base: Base function for the flip loss.
     :return: The flip loss given a base loss function
     """
-    print(pred.shape, target.shape, q.shape)
     norm_q = q * q_factor
     z = (pred < 0.5).type_as(pred) * target
     q_target = (1 - target) * norm_q + target * (1 - norm_q)
@@ -223,7 +222,7 @@ class Unet2D(BaseModel):
                 'name': 'unc',
                 'weight': 1,
                 'f': lambda p, t: positive_uncertainty_loss(
-                    p[0],
+                    torch.squeeze(p[0], dim=1),
                     torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
                     torch.squeeze(p[1], dim=1)
                 )

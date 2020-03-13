@@ -202,7 +202,7 @@ class Unet2D(BaseModel):
         # <Loss function setup>
         self.train_functions = [
             {
-                'name': 'xtop',
+                'name': 'xentr',
                 'weight': 1,
                 'f': lambda p, t: F.binary_cross_entropy(
                     torch.squeeze(p[0], dim=1),
@@ -210,7 +210,7 @@ class Unet2D(BaseModel):
                 )
             },
             {
-                'name': 'dbck',
+                'name': 'dsc',
                 'weight': 1,
                 'f': lambda p, t: dsc_loss(1 - p[0], t == 0)
             },

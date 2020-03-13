@@ -147,7 +147,7 @@ def train_test_net(net_name, verbose=1):
         overlap = (64, 64)
         num_workers = 1
 
-        model_name = '{:}.mosaic{:}.mdl'.format(net_name, case)
+        model_name = '{:}.unc.mosaic{:}.mdl'.format(net_name, case)
         net = Unet2D(n_inputs=len(norm_x[0]))
 
         training_start = time.time()

@@ -185,6 +185,13 @@ class Unet2D(BaseModel):
             conv_filters, device, n_inputs, pooling=True
         )
 
+        self.deep_seg = nn.Sequential(
+            nn.Conv2d(conv_filters[-1], conv_filters[0], 1),
+            nn.ReLU(),
+            nn.BatchNorm2d(conv_filters[0]),
+        )
+        self.deep_seg.to(device)
+
         self.seg = nn.Sequential(
             nn.Conv2d(conv_filters[0], conv_filters[0], 1),
             nn.ReLU(),
@@ -295,6 +302,7 @@ class Unet2D(BaseModel):
                 self.autoencoder.training
             )
             input_ae = F.max_pool2d(input_ae, 2)
+        input_ae = self.deep_seg(input_ae)
         input_ae = F.dropout2d(
             self.autoencoder.u(input_ae),
             self.autoencoder.dropout,

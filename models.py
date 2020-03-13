@@ -229,7 +229,7 @@ class Unet2D(BaseModel):
                             t.type_as(p[2]),
                             2 * len(self.autoencoder.down)),
                         dim=1
-                    ).type_as(p[2]).to(p[2].device),
+                    ).to(p[2].device),
                     alpha=0.5
                 )
             },

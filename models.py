@@ -2,6 +2,7 @@ import itertools
 import time
 import numpy as np
 import torch
+from functools import partial
 from torch import nn
 import torch.nn.functional as F
 from data_manipulation.models import BaseModel
@@ -207,7 +208,8 @@ class Unet2D(BaseModel):
                 'weight': 1,
                 'f': lambda p, t: focal_loss(
                     torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device)
+                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
+                    alpha=0.5
                 )
             },
             {
@@ -223,17 +225,18 @@ class Unet2D(BaseModel):
                     torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
                     torch.squeeze(p[1], dim=1),
                     q_factor=1,
-                    base=focal_loss
+                    base=partial(focal_loss, alpha=0.5)
                 )
             },
         ]
         self.val_functions = [
             {
                 'name': 'xentr',
-                'weight': 1,
+                'weight': 0,
                 'f': lambda p, t: focal_loss(
                     torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device)
+                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
+                    alpha=0.5
                 )
             },
             {
@@ -250,7 +253,9 @@ class Unet2D(BaseModel):
                 'name': 'unc',
                 'weight': 0,
                 'f': lambda p, t: torch.min(p[1])
-            },
+            }
+        ]
+        self.acc_functions = [
             {
                 'name': 'UNC',
                 'weight': 0,

@@ -186,7 +186,7 @@ class Unet2D(BaseModel):
         )
 
         self.deep_seg = nn.Sequential(
-            nn.Conv2d(conv_filters[-1], conv_filters[0], 1),
+            nn.Conv2d(conv_filters[-2], conv_filters[0], 1),
             nn.ReLU(),
             nn.BatchNorm2d(conv_filters[0]),
         )

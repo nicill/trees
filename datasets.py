@@ -91,13 +91,16 @@ class CroppingDown2DDataset(Dataset):
         )
         if filtered:
             self.patch_slices = [
-                [s for s in slices_i if np.sum(label[s]) > 0]
+                [s for s in slices_i if np.sum(
+                    label[(slice(None, None),) + s]
+                ) > 0]
                 for label, slices_i in zip(self.labels, slices)
             ]
         else:
             self.patch_slices = slices
 
         self.max_slice = np.cumsum(list(map(len, self.patch_slices)))
+        print(self.max_slice)
 
     def __getitem__(self, index):
         # We select the case

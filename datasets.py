@@ -74,7 +74,10 @@ class CroppingDown2DDataset(Dataset):
             )
             for im in data
         ]
-        self.labels = [torch.max_pool2d(lab, ratio).numpy() for lab in labels]
+        self.labels = [
+            torch.max_pool2d(torch.tensor(lab), ratio).numpy()
+            for lab in labels
+        ]
 
         if type(patch_size) is not tuple:
             patch_size = (patch_size,) * dim

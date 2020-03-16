@@ -348,9 +348,11 @@ class Unet2D(BaseModel):
             # Case init
             t_case_in = time.time()
 
-            seg_i = np.zeros(im.shape[1:])
-            unc_i = np.zeros(im.shape[1:])
             if patch_size is not None:
+
+                seg_i = np.zeros(im.shape[1:])
+                unc_i = np.zeros(im.shape[1:])
+
                 limits = tuple(
                     list(range(0, lim, patch_size))[:-1] + [lim] for lim in im.shape[1:]
                 )
@@ -395,17 +397,41 @@ class Unet2D(BaseModel):
                     print('\033[K', end='', flush=True)
                     print(batch_s, end='\r', flush=True)
 
-                if verbose:
-                    print(
-                        '\033[K%sSegmentation finished' % ' '.join([''] * 12)
-                    )
             else:
                 data_tensor = to_torch_var(np.expand_dims(im, axis=0))
+
                 with torch.no_grad():
                     torch.cuda.synchronize()
                     seg_pi, unc_pi, _ = self(data_tensor)
+                    seg_i = np.squeeze(seg_pi.cpu().numpy())
+                    unc_i = np.squeeze(unc_pi.cpu().numpy())
                     torch.cuda.synchronize()
                     torch.cuda.empty_cache()
+
+                # Printing
+                init_c = '\033[0m' if self.training else '\033[38;5;238m'
+                whites = ' '.join([''] * 12)
+                percent = 20 * (pi + 1)
+                progress_s = ''.join(['-'] * percent)
+                remainder_s = ''.join([' '] * (20 - percent))
+
+                t_out = time.time() - t_in
+                t_case_out = time.time() - t_case_in
+                time_s = time_to_string(t_out)
+
+                t_eta = (t_case_out / (pi + 1))
+                eta_s = time_to_string(t_eta)
+                batch_s = '{:}Case {:03}/{:03} [{:}>{:}] {:} ETA: {:}'.format(
+                    init_c + whites, i + 1, len(data),
+                    progress_s, remainder_s, time_s, eta_s + '\033[0m'
+                )
+                print('\033[K', end='', flush=True)
+                print(batch_s, end='\r', flush=True)
+
+            if verbose:
+                print(
+                    '\033[K%sSegmentation finished' % ' '.join([''] * 12)
+                )
 
             seg.append(seg_i)
             unc.append(unc_i)

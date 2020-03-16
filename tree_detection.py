@@ -261,8 +261,16 @@ def train_test_net(net_name, ratio=10, verbose=1):
         upunci = imresize(unci[0], test_x.shape[1:], order=2)
         print(upyi[0].shape, upyi[0].dtype, upunci[0].shape, upunci[0].dtype)
         cv2.imwrite(
+            os.path.join(d_path, 'pred.ds{:}_trees{:}.jpg'.format(ratio, case)),
+            (yi[0] * 255).astype(np.uint8)
+        )
+        cv2.imwrite(
             os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case)),
             (upyi * 255).astype(np.uint8)
+        )
+        cv2.imwrite(
+            os.path.join(d_path, 'unc.ds{:}_trees{:}.jpg'.format(ratio, case)),
+            (unci[0] * 255).astype(np.uint8)
         )
         cv2.imwrite(
             os.path.join(d_path, 'unc.d{:}_trees{:}.jpg'.format(ratio, case)),

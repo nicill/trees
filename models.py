@@ -411,7 +411,7 @@ class Unet2D(BaseModel):
                 # Printing
                 init_c = '\033[0m' if self.training else '\033[38;5;238m'
                 whites = ' '.join([''] * 12)
-                percent = 20 * (pi + 1)
+                percent = 20 * (i + 1)
                 progress_s = ''.join(['-'] * percent)
                 remainder_s = ''.join([' '] * (20 - percent))
 
@@ -419,7 +419,7 @@ class Unet2D(BaseModel):
                 t_case_out = time.time() - t_case_in
                 time_s = time_to_string(t_out)
 
-                t_eta = (t_case_out / (pi + 1))
+                t_eta = (t_case_out / (i + 1)) * (len(data) - i + 1)
                 eta_s = time_to_string(t_eta)
                 batch_s = '{:}Case {:03}/{:03} [{:}>{:}] {:} ETA: {:}'.format(
                     init_c + whites, i + 1, len(data),

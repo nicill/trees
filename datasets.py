@@ -63,7 +63,7 @@ class CroppingDown2DDataset(Dataset):
             ratio=10
     ):
         # Init
-        data_shape = self.data[0].shape
+        data_shape = data[0].shape
         dim = len(data_shape)
         self.data = [
             imresize(

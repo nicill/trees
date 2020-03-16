@@ -4,9 +4,10 @@ import re
 import cv2
 import time
 import numpy as np
+from skimage.transform import resize as imresize
 from torch.utils.data import DataLoader
-from data_manipulation.utils import color_codes, find_file
-from datasets import Cropping2DDataset
+from data_manipulation.utils import color_codes
+from datasets import Cropping2DDataset, CroppingDown2DDataset
 from models import Unet2D
 
 
@@ -55,7 +56,7 @@ def parse_inputs():
     return options
 
 
-def train_test_net(net_name, verbose=1):
+def train_test_net(net_name, ratio=10, verbose=1):
     """
 
     :param net_name:
@@ -147,7 +148,7 @@ def train_test_net(net_name, verbose=1):
         overlap = (64, 64)
         num_workers = 1
 
-        model_name = '{:}.unc.mosaic{:}.mdl'.format(net_name, case)
+        model_name = '{:}.d{:}.unc.mosaic{:}.mdl'.format(net_name, ratio, case)
         net = Unet2D(n_inputs=len(norm_x[0]))
 
         training_start = time.time()
@@ -177,13 +178,21 @@ def train_test_net(net_name, verbose=1):
                 l_val = train_y[n_t_samples:]
 
                 print('Training dataset (with validation)')
-                train_dataset = Cropping2DDataset(
+                # train_dataset = Cropping2DDataset(
+                #     d_train, l_train, patch_size=patch_size, overlap=overlap,
+                #     filtered=True
+                # )
+                train_dataset = CroppingDown2DDataset(
                     d_train, l_train, patch_size=patch_size, overlap=overlap,
                     filtered=True
                 )
 
                 print('Validation dataset (with validation)')
-                val_dataset = Cropping2DDataset(
+                # val_dataset = Cropping2DDataset(
+                #     d_val, l_val, patch_size=patch_size, overlap=overlap,
+                #     filtered=True
+                # )
+                val_dataset = CroppingDown2DDataset(
                     d_val, l_val, patch_size=patch_size, overlap=overlap,
                     filtered=True
                 )
@@ -237,14 +246,21 @@ def train_test_net(net_name, verbose=1):
                 )
             )
 
-        yi, unci = net.test([test_x])
+        downtest_x = imresize(
+            test_x,
+            im.shape[0] + [length // ratio for length in im.shape[1:]],
+            order=2
+        )
+        yi, unci = net.test([downtest_x], patch_size=None)
+        upyi = imresize(yi, test_x.shape, order=2)
+        upunci = imresize(unci, test_x.shape, order=2)
         cv2.imwrite(
-            os.path.join(d_path, 'pred_trees{:}.jpg'.format(case)),
-            (yi[0] * 255).astype(np.uint8)
+            os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case)),
+            (upyi[0] * 255).astype(np.uint8)
         )
         cv2.imwrite(
-            os.path.join(d_path, 'unc_trees{:}.jpg'.format(case)),
-            (unci[0] * 255).astype(np.uint8)
+            os.path.join(d_path, 'unc.d{:}_trees{:}.jpg'.format(ratio, case)),
+            (upunci[0] * 255).astype(np.uint8)
         )
 
 

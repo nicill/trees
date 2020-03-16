@@ -250,7 +250,9 @@ def train_test_net(net_name, ratio=10, verbose=1):
 
         downtest_x = imresize(
             test_x,
-            test_x.shape[0] + [length // ratio for length in test_x.shape[1:]],
+            (test_x.shape[0],) + tuple(
+                [length // ratio for length in test_x.shape[1:]]
+            ),
             order=2
         )
         yi, unci = net.test([downtest_x], patch_size=None)

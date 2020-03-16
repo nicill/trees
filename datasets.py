@@ -75,7 +75,9 @@ class CroppingDown2DDataset(Dataset):
             for im in data
         ]
         self.labels = [
-            torch.max_pool2d(torch.tensor(lab), ratio).numpy()
+            torch.max_pool2d(
+                torch.tensor(np.expand_dims(lab, 0)), ratio
+            ).numpy()
             for lab in labels
         ]
 
@@ -111,8 +113,7 @@ class CroppingDown2DDataset(Dataset):
 
         inputs = self.data[case_idx][none_slice + slice_i].astype(np.float32)
 
-        labels = self.labels[case_idx][slice_i].astype(np.uint8)
-        target = np.expand_dims(labels, 0)
+        target = self.labels[case_idx][none_slice + slice_i].astype(np.uint8)
 
         return inputs, target
 

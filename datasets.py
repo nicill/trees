@@ -99,7 +99,7 @@ class CroppingDown2DDataset(Dataset):
 
         print(
             np.cumsum(list(map(np.sum, self.labels))),
-            np.cumsum(list(map(len, slices)))
+            np.cumsum(list(map(len, slices))),
             np.cumsum(list(map(len, self.patch_slices)))
         )
 

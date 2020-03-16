@@ -67,7 +67,9 @@ class CroppingDown2DDataset(Dataset):
         dim = len(data_shape)
         self.data = [
             imresize(
-                im, im.shape[0] + [length // ratio for length in im.shape[1:]],
+                im, (im.shape[0],) + tuple(
+                    [length // ratio for length in im.shape[1:]]
+                ),
                 order=2
             )
             for im in data

@@ -77,7 +77,7 @@ class CroppingDown2DDataset(Dataset):
         self.labels = [
             torch.max_pool2d(
                 torch.tensor(np.expand_dims(lab, 0)).type(torch.float32), ratio
-            ).numpy()
+            ).numpy().astype(np.bool)
             for lab in labels
         ]
 
@@ -99,6 +99,7 @@ class CroppingDown2DDataset(Dataset):
 
         print(
             np.cumsum(list(map(np.sum, self.labels))),
+            np.cumsum(list(map(len, slices)))
             np.cumsum(list(map(len, self.patch_slices)))
         )
 

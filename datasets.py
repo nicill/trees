@@ -97,7 +97,10 @@ class CroppingDown2DDataset(Dataset):
         else:
             self.patch_slices = slices
 
-        print(np.cumsum(list(map(len, self.patch_slices))))
+        print(
+            np.cumsum(list(map(np.sum, self.labels))),
+            np.cumsum(list(map(len, self.patch_slices)))
+        )
 
         self.max_slice = np.cumsum(list(map(len, self.patch_slices)))
 

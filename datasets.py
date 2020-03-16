@@ -80,7 +80,7 @@ class CroppingDown2DDataset(Dataset):
             ).numpy()
             for lab in labels
         ]
-        for d, l in zip(self.dat, self.labels):
+        for d, l in zip(self.data, self.labels):
             print(d.shape, l.shape)
 
         if type(patch_size) is not tuple:

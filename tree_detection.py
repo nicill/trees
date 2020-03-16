@@ -144,8 +144,10 @@ def train_test_net(net_name, ratio=10, verbose=1):
 
         val_split = 0.1
         batch_size = 32
-        patch_size = (256, 256)
-        overlap = (64, 64)
+        # patch_size = (256, 256)
+        patch_size = (64, 64)
+        # overlap = (64, 64)
+        overlap = (32, 32)
         num_workers = 1
 
         model_name = '{:}.d{:}.unc.mosaic{:}.mdl'.format(net_name, ratio, case)

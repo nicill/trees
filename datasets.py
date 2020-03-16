@@ -100,9 +100,6 @@ class CroppingDown2DDataset(Dataset):
             self.patch_slices = slices
 
         self.max_slice = np.cumsum(list(map(len, self.patch_slices)))
-        print(
-            np.cumsum(list(map(len, slices))),
-            self.max_slice)
 
     def __getitem__(self, index):
         # We select the case

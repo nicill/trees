@@ -181,10 +181,15 @@ class Unet2D(BaseModel):
         self.device = device
 
         # <Parameter setup>
+        # I plan to change that to use the AutoEncoder framework in
+        # data_manipulation.
         self.autoencoder = Autoencoder2D(
             conv_filters, device, n_inputs, pooling=True
         )
 
+        # Deep supervision branch.
+        # This branch adapts the bottleneck filters to work with the final
+        # segmentation block.
         self.deep_seg = nn.Sequential(
             nn.Conv2d(conv_filters[-1], conv_filters[0], 1),
             nn.ReLU(),
@@ -192,6 +197,7 @@ class Unet2D(BaseModel):
         )
         self.deep_seg.to(device)
 
+        # Final segmentation block.
         self.seg = nn.Sequential(
             nn.Conv2d(conv_filters[0], conv_filters[0], 1),
             nn.ReLU(),
@@ -200,6 +206,9 @@ class Unet2D(BaseModel):
         )
         self.seg.to(device)
 
+        # Final uncertainty block.
+        # For now, this block is only used on the main branch. I am not sure
+        # on how useful it might be for the deep branch.
         self.unc = nn.Sequential(
             nn.Conv2d(conv_filters[0], conv_filters[0], 1),
             nn.ReLU(),
@@ -210,6 +219,7 @@ class Unet2D(BaseModel):
 
         # <Loss function setup>
         self.train_functions = [
+            # Focal loss for the main branch.
             {
                 'name': 'xentr',
                 'weight': 1,
@@ -219,6 +229,7 @@ class Unet2D(BaseModel):
                     alpha=0.5
                 )
             },
+            # Focal loss for the deep supervision branch (bottleneck).
             {
                 'name': 'dp xe',
                 'weight': 1,
@@ -233,11 +244,13 @@ class Unet2D(BaseModel):
                     alpha=0.5
                 )
             },
+            # DSC loss for the main branch.
             {
                 'name': 'dsc',
                 'weight': 1,
                 'f': lambda p, t: dsc_loss(p[0], t)
             },
+            # DSC loss for the deep supervision branch (bottleneck).
             {
                 'name': 'dp dsc',
                 'weight': 1,
@@ -249,6 +262,7 @@ class Unet2D(BaseModel):
                     ).to(p[2].device)
                 )
             },
+            # Uncertainty loss based on the flip loss (by Mckinley et al).
             {
                 'name': 'unc',
                 'weight': 1,
@@ -262,6 +276,8 @@ class Unet2D(BaseModel):
             },
         ]
         self.val_functions = [
+            # Focal loss for validation.
+            # The weight is 0 because I feel like DSC is more important.
             {
                 'name': 'xentr',
                 'weight': 0,
@@ -271,11 +287,16 @@ class Unet2D(BaseModel):
                     alpha=0.5
                 )
             },
+            # DSC loss for validation.
             {
                 'name': 'dsc',
                 'weight': 1,
                 'f': lambda p, t: dsc_loss(p[0], t)
             },
+            # Losses based on uncertainty values.for
+            # Their weight is 0 because I don't want them to affect early
+            # stopping. They are useful values to see how the uncertainty is
+            # evolving, but that's it.
             {
                 'name': 'μ unc',
                 'weight': 0,
@@ -288,6 +309,14 @@ class Unet2D(BaseModel):
             }
         ]
         self.acc_functions = [
+            # Max uncertainty.
+            # I use it as an accuracy function, because we want to maximise
+            # them (losses are minimised) and I actually think that the
+            # maximum uncertainty should rise and the mininum fall for it
+            # to be any useful.
+            # Since accuracy metrics are there just for added information
+            # and they should not affect early stopping, they do not have
+            # weights.
             {
                 'name': 'UNC',
                 'f': lambda p, t: torch.max(p[1])
@@ -307,7 +336,8 @@ class Unet2D(BaseModel):
     def forward(self, input_ae):
         input_s = self.autoencoder(input_ae)
 
-        #  Deep supervision
+        # Deep supervision.
+        # We need to complete the down path and the bottleneck again.
         for c in self.autoencoder.down:
             input_ae = F.dropout2d(
                 c(input_ae),
@@ -322,6 +352,8 @@ class Unet2D(BaseModel):
         )
         input_ae = self.deep_seg(input_ae)
 
+        # Since we are dealing with a binary problem, there is no need to use
+        # softmax.
         multi_seg = torch.sigmoid(self.seg(input_s))
         unc = torch.sigmoid(self.unc(input_s))
         low_seg = torch.sigmoid(self.seg(input_ae))
@@ -348,31 +380,49 @@ class Unet2D(BaseModel):
             # Case init
             t_case_in = time.time()
 
+            # This branch is only used when images are too big. In this case
+            # they are split in patches and each patch is trained separately.
+            # Currently, the image is partitioned in blocks with no overlap,
+            # however, it might be a good idea to sample all possible patches,
+            # test them, and average the results. I know both approaches
+            # produce unwanted artifacts, so I don't know.
             if patch_size is not None:
 
+                # Initial results. Filled to 0.
                 seg_i = np.zeros(im.shape[1:])
                 unc_i = np.zeros(im.shape[1:])
 
+                # The following lines are just a complicated way of finding all
+                # the possible combinations of patch indices.
                 limits = tuple(
-                    list(range(0, lim, patch_size))[:-1] + [lim] for lim in im.shape[1:]
+                    list(range(0, lim, patch_size))[:-1] + [lim]
+                    for lim in im.shape[1:]
                 )
                 limits_product = list(itertools.product(
                     range(len(limits[0]) - 1), range(len(limits[1]) - 1)
                 ))
                 n_patches = len(limits_product)
+
+                # The following code is just a normal test loop with all the
+                # previously computed patches.
                 for pi, (xi, xj) in enumerate(limits_product):
+                    # Here we just take the current patch defined by its slice
+                    # in the x and y axes. Then we convert it into a torch
+                    # tensor for testing.
                     xslice = slice(limits[0][xi], limits[0][xi + 1] + 1)
                     yslice = slice(limits[1][xj], limits[1][xj + 1] + 1)
                     data_tensor = to_torch_var(
                         np.expand_dims(im[slice(None), xslice, yslice], axis=0)
                     )
 
+                    # Testing itself.
                     with torch.no_grad():
                         torch.cuda.synchronize()
                         seg_pi, unc_pi, _ = self(data_tensor)
                         torch.cuda.synchronize()
                         torch.cuda.empty_cache()
 
+                    # Then we just fill the results image.
                     seg_i[xslice, yslice] = np.squeeze(seg_pi.cpu().numpy())
                     unc_i[xslice, yslice] = np.squeeze(unc_pi.cpu().numpy())
 
@@ -398,15 +448,23 @@ class Unet2D(BaseModel):
                     print(batch_s, end='\r', flush=True)
 
             else:
+                # If we use the whole image the process is way simpler.
+                # We only need to convert the data into a torch tensor,
+                # test it and return the results.
                 data_tensor = to_torch_var(np.expand_dims(im, axis=0))
 
+                # Testing
                 with torch.no_grad():
                     torch.cuda.synchronize()
                     seg_pi, unc_pi, _ = self(data_tensor)
-                    seg_i = np.squeeze(seg_pi.cpu().numpy())
-                    unc_i = np.squeeze(unc_pi.cpu().numpy())
                     torch.cuda.synchronize()
                     torch.cuda.empty_cache()
+
+                # Image squeezing.
+                # The images have a batch number at the beginning. Since each
+                # batch is just an image, that batch number is useless.
+                seg_i = np.squeeze(seg_pi.cpu().numpy())
+                unc_i = np.squeeze(unc_pi.cpu().numpy())
 
                 # Printing
                 init_c = '\033[0m' if self.training else '\033[38;5;238m'

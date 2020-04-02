@@ -263,7 +263,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
 
         gt_bool = test_y.astype(np.bool)
         gt_labeled = bwlabeln(gt_bool)
-        unet_bool = upyi.astype(np.bool)
+        unet_bool = upyi > 0.5
         unet_labeled = bwlabeln(unet_bool)
 
         gt_labs = np.unique(gt_labeled[gt_bool])

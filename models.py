@@ -455,9 +455,9 @@ class Unet2D(BaseModel):
 
                 # Testing
                 with torch.no_grad():
-                    torch.cuda.synchronize()
+                    torch.cuda.synchronize(self.device)
                     seg_pi, unc_pi, _ = self(data_tensor)
-                    torch.cuda.synchronize()
+                    torch.cuda.synchronize(self.device)
                     torch.cuda.empty_cache()
 
                 # Image squeezing.

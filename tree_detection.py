@@ -5,6 +5,7 @@ import cv2
 import time
 import numpy as np
 from skimage.transform import resize as imresize
+from skimage.measure import label as bwlabeln
 from torch.utils.data import DataLoader
 from data_manipulation.utils import color_codes
 from datasets import Cropping2DDataset, CroppingDown2DDataset
@@ -259,6 +260,23 @@ def train_test_net(net_name, ratio=10, verbose=1):
 
         upyi = imresize(yi[0], test_x.shape[1:], order=2)
         upunci = imresize(unci[0], test_x.shape[1:], order=2)
+
+        gt_bool = test_y.astype(np.bool)
+        gt_labeled = bwlabeln(gt_bool)
+        unet_bool = upyi.astype(np.bool)
+        unet_labeled = bwlabeln(unet_bool)
+
+        gt_labs = np.unique(gt_labeled[gt_bool])
+        unet_labs = np.unique(unet_labeled[unet_bool])
+        tp_labs = np.unique(gt_labeled[unet_bool])
+        notfp_labs = np.unique(unet_labeled[gt_bool])
+        notfp_labs = notfp_labs[notfp_labs > 0]
+        fp_labs = np.logical_not(np.isin(unet_labs, notfp_labs))
+
+        tpf = tp_labs / gt_labs
+        fpf = fp_labs / unet_labs
+
+        print('Mosaic {:} TPF = {:5.3f} / FPF = {:5.3f}'.format(case, tpf, fpf))
 
         cv2.imwrite(
             os.path.join(d_path, 'pred.ds{:}_trees{:}.jpg'.format(ratio, case)),

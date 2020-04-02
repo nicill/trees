@@ -206,7 +206,7 @@ class Unet2D(BaseModel):
                 nn.Linear(f_in, f_out),
                 nn.SELU()
             )
-            for f_in, f_out in zip(conv_filters[:0:-1, conv_filters[-2::-1]])
+            for f_in, f_out in zip(conv_filters[:0:-1], conv_filters[-2::-1])
         ])
         self.counter.to(device)
         self.final_counter = nn.Linear(conv_filters[0], 1)

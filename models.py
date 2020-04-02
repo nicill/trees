@@ -197,6 +197,21 @@ class Unet2D(BaseModel):
         )
         self.deep_seg.to(device)
 
+        # These layers will be used to count the tops on a regression way.
+        # Here I use SELU instead of ReLU because it's self normalising and
+        # avoids the need of using BatchNorm (I am not sure how well it works
+        # with linear layers).
+        self.counter = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(f_in, f_out),
+                nn.SELU()
+            )
+            for f_in, f_out in zip(conv_filters[:0:-1, conv_filters[-2::-1]])
+        ])
+        self.counter.to(device)
+        self.final_counter = nn.Linear(conv_filters[0], 1)
+        self.final_counter.to(device)
+
         # Final segmentation block.
         self.seg = nn.Sequential(
             nn.Conv2d(conv_filters[0], conv_filters[0], 1),
@@ -225,7 +240,7 @@ class Unet2D(BaseModel):
                 'weight': 1,
                 'f': lambda p, t: focal_loss(
                     torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
+                    torch.squeeze(t[0], dim=1).type_as(p[0]).to(p[0].device),
                     alpha=0.5
                 )
             },
@@ -237,7 +252,7 @@ class Unet2D(BaseModel):
                     torch.squeeze(p[2], dim=1),
                     torch.squeeze(
                         F.max_pool2d(
-                            t.type_as(p[2]),
+                            t[0].type_as(p[2]),
                             2 ** len(self.autoencoder.down)),
                         dim=1
                     ).to(p[2].device),
@@ -248,7 +263,7 @@ class Unet2D(BaseModel):
             {
                 'name': 'dsc',
                 'weight': 1,
-                'f': lambda p, t: dsc_loss(p[0], t)
+                'f': lambda p, t: dsc_loss(p[0], t[0])
             },
             # DSC loss for the deep supervision branch (bottleneck).
             {
@@ -257,9 +272,17 @@ class Unet2D(BaseModel):
                 'f': lambda p, t: dsc_loss(
                     p[2],
                     F.max_pool2d(
-                        t.type_as(p[2]),
+                        t[0].type_as(p[2]),
                         2 ** len(self.autoencoder.down)
                     ).to(p[2].device)
+                )
+            },
+            # Counting loss
+            {
+                'name': 'count',
+                'weight': 1,
+                'f': lambda p, t: F.mse_loss(
+                    p[3], t[1].astype(p[3])
                 )
             },
             # Uncertainty loss based on the flip loss (by Mckinley et al).
@@ -268,7 +291,7 @@ class Unet2D(BaseModel):
                 'weight': 1,
                 'f': lambda p, t: flip_loss(
                     torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
+                    torch.squeeze(t[0], dim=1).type_as(p[0]).to(p[0].device),
                     torch.squeeze(p[1], dim=1),
                     q_factor=1,
                     base=partial(focal_loss, alpha=0.5)
@@ -283,7 +306,7 @@ class Unet2D(BaseModel):
                 'weight': 0,
                 'f': lambda p, t: focal_loss(
                     torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
+                    torch.squeeze(t[0], dim=1).type_as(p[0]).to(p[0].device),
                     alpha=0.5
                 )
             },
@@ -291,7 +314,7 @@ class Unet2D(BaseModel):
             {
                 'name': 'dsc',
                 'weight': 1,
-                'f': lambda p, t: dsc_loss(p[0], t)
+                'f': lambda p, t: dsc_loss(p[0], t[0])
             },
             # Losses based on uncertainty values.for
             # Their weight is 0 because I don't want them to affect early
@@ -345,6 +368,11 @@ class Unet2D(BaseModel):
                 self.autoencoder.training
             )
             input_ae = F.max_pool2d(input_ae, 2)
+        # Tree counting
+        # We will start counting on the bottleneck of the unet.
+        count = torch.sum(input_ae, dim=(2, 3))
+
+        # This is the last part of deep supervision
         input_ae = F.dropout2d(
             self.autoencoder.u(input_ae),
             self.autoencoder.dropout,
@@ -357,8 +385,9 @@ class Unet2D(BaseModel):
         multi_seg = torch.sigmoid(self.seg(input_s))
         unc = torch.sigmoid(self.unc(input_s))
         low_seg = torch.sigmoid(self.seg(input_ae))
+        tops = self.final_counter(count)
 
-        return multi_seg, unc, low_seg
+        return multi_seg, unc, low_seg, tops
 
     def dropout_update(self):
         super().dropout_update()
@@ -371,6 +400,7 @@ class Unet2D(BaseModel):
         self.eval()
         seg = list()
         unc = list()
+        tops = list()
 
         # Init
         t_in = time.time()
@@ -391,6 +421,7 @@ class Unet2D(BaseModel):
                 # Initial results. Filled to 0.
                 seg_i = np.zeros(im.shape[1:])
                 unc_i = np.zeros(im.shape[1:])
+                tops_i = 0
 
                 # The following lines are just a complicated way of finding all
                 # the possible combinations of patch indices.
@@ -418,13 +449,14 @@ class Unet2D(BaseModel):
                     # Testing itself.
                     with torch.no_grad():
                         torch.cuda.synchronize()
-                        seg_pi, unc_pi, _ = self(data_tensor)
+                        seg_pi, unc_pi, _, tops_pi = self(data_tensor)
                         torch.cuda.synchronize()
                         torch.cuda.empty_cache()
 
                     # Then we just fill the results image.
                     seg_i[xslice, yslice] = np.squeeze(seg_pi.cpu().numpy())
                     unc_i[xslice, yslice] = np.squeeze(unc_pi.cpu().numpy())
+                    tops_i += np.squeeze(tops_pi.cpu().numpy())
 
                     # Printing
                     init_c = '\033[0m' if self.training else '\033[38;5;238m'
@@ -456,7 +488,7 @@ class Unet2D(BaseModel):
                 # Testing
                 with torch.no_grad():
                     torch.cuda.synchronize(self.device)
-                    seg_pi, unc_pi, _ = self(data_tensor)
+                    seg_pi, unc_pi, _, tops_pi = self(data_tensor)
                     torch.cuda.synchronize(self.device)
                     torch.cuda.empty_cache()
 
@@ -465,6 +497,7 @@ class Unet2D(BaseModel):
                 # batch is just an image, that batch number is useless.
                 seg_i = np.squeeze(seg_pi.cpu().numpy())
                 unc_i = np.squeeze(unc_pi.cpu().numpy())
+                tops_i = np.squeeze(tops_pi.cpu().numpy())
 
                 # Printing
                 init_c = '\033[0m' if self.training else '\033[38;5;238m'
@@ -493,4 +526,5 @@ class Unet2D(BaseModel):
 
             seg.append(seg_i)
             unc.append(unc_i)
-        return seg, unc
+            tops.append(tops_i)
+        return seg, unc, tops

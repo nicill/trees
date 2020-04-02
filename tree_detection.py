@@ -151,7 +151,9 @@ def train_test_net(net_name, ratio=10, verbose=1):
         overlap = (32, 32)
         num_workers = 1
 
-        model_name = '{:}.d{:}.unc.mosaic{:}.mdl'.format(net_name, ratio, case)
+        model_name = '{:}.d{:}.unc.mosaic{:}.mdl'.format(
+            net_name, ratio, case
+        )
         net = Unet2D(n_inputs=len(norm_x[0]))
 
         training_start = time.time()
@@ -256,7 +258,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
             ),
             order=2
         )
-        yi, unci = net.test([downtest_x], patch_size=None)
+        yi, unci, topsi = net.test([downtest_x], patch_size=None)
 
         upyi = imresize(yi[0], test_x.shape[1:], order=2)
         upunci = imresize(unci[0], test_x.shape[1:], order=2)
@@ -279,7 +281,12 @@ def train_test_net(net_name, ratio=10, verbose=1):
         tpf = tp / gt_tops
         fpf = fp / unet_tops
 
-        print('Mosaic {:} TPF = {:5.3f} / FPF = {:5.3f}'.format(case, tpf, fpf))
+        print(
+            'Mosaic {:} TPF = {:5.3f} / FPF = {:5.3f} / '
+            'tops = (seg: {:3d}, count: {:5.3f}, gt: {:3d})'.format(
+                case, tpf, fpf, unet_tops, topsi, gt_tops
+            )
+        )
 
         cv2.imwrite(
             os.path.join(d_path, 'pred.ds{:}_trees{:}.jpg'.format(ratio, case)),
@@ -310,7 +317,7 @@ def main():
     )
 
     ''' <Detection task> '''
-    net_name = 'tree-detection.unet'
+    net_name = 'tree-detection-count.unet'
 
     train_test_net(net_name)
 

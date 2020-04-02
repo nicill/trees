@@ -1,4 +1,5 @@
 from skimage.transform import resize as imresize
+from skimage.measure import label as bwlabeln
 import numpy as np
 import torch
 from torch.utils.data.dataset import Dataset
@@ -118,7 +119,10 @@ class CroppingDown2DDataset(Dataset):
 
         target = self.labels[case_idx][none_slice + slice_i].astype(np.uint8)
 
-        return inputs, target
+        target_labs = bwlabeln(target.astype(np.bool))
+        tops = len(np.unique(target_labs[target.astype(np.bool)]))
+
+        return inputs, (target, tops)
 
     def __len__(self):
         return self.max_slice[-1]

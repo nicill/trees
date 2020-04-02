@@ -270,11 +270,14 @@ def train_test_net(net_name, ratio=10, verbose=1):
         unet_labs = np.unique(unet_labeled[unet_bool])
         tp_labs = np.unique(gt_labeled[unet_bool])
         notfp_labs = np.unique(unet_labeled[gt_bool])
-        notfp_labs = notfp_labs[notfp_labs > 0]
         fp_labs = np.logical_not(np.isin(unet_labs, notfp_labs))
+        tp = len(tp_labs[tp_labs > 0])
+        fp = np.count_nonzero(fp_labs)
+        gt_tops = len(gt_labs)
+        unet_tops = len(unet_labs)
 
-        tpf = tp_labs / gt_labs
-        fpf = fp_labs / unet_labs
+        tpf = tp / gt_tops
+        fpf = fp / unet_tops
 
         print('Mosaic {:} TPF = {:5.3f} / FPF = {:5.3f}'.format(case, tpf, fpf))
 

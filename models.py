@@ -179,8 +179,6 @@ class Unet2D(BaseModel):
         self.t_train = 0
         self.t_val = 0
         self.device = device
-        if conv_filters is None:
-            conv_filters = [32, 64, 128, 256]
 
         # <Parameter setup>
         # I plan to change that to use the AutoEncoder framework in
@@ -205,21 +203,12 @@ class Unet2D(BaseModel):
         # with linear layers).
         self.precounter = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(f_in, f_out, 3, padding=1),
-                nn.ReLU(),
-                nn.BatchNorm2d(f_out)
-            )
-            for f_in, f_out in zip([1] + conv_filters[:-1], conv_filters)
-        ])
-        self.precounter.to(device)
-        self.counter = nn.ModuleList([
-            nn.Sequential(
                 nn.Linear(f_in, f_out),
                 nn.SELU()
             )
             for f_in, f_out in zip(conv_filters[:0:-1], conv_filters[-2::-1])
         ])
-        self.counter.to(device)
+        self.precounter.to(device)
         self.final_counter = nn.Linear(conv_filters[0], 1)
         self.final_counter.to(device)
 
@@ -288,14 +277,6 @@ class Unet2D(BaseModel):
                     ).to(p[2].device)
                 )
             },
-            # Counting loss.
-            {
-                'name': 'count',
-                'weight': 1,
-                'f': lambda p, t: F.mse_loss(
-                    torch.squeeze(p[3]), t[1].type_as(p[3])
-                )
-            },
             # Uncertainty loss based on the flip loss (by Mckinley et al).
             {
                 'name': 'unc',
@@ -326,14 +307,6 @@ class Unet2D(BaseModel):
                 'name': 'dsc',
                 'weight': 1,
                 'f': lambda p, t: dsc_loss(p[0], t[0])
-            },
-            # Counting loss for validation.
-            {
-                'name': 'count',
-                'weight': 1,
-                'f': lambda p, t: F.mse_loss(
-                    torch.squeeze(p[3]), t[1].type_as(p[3])
-                )
             },
             # Losses based on uncertainty values.for
             # Their weight is 0 because I don't want them to affect early
@@ -392,24 +365,16 @@ class Unet2D(BaseModel):
             self.autoencoder.dropout,
             self.autoencoder.training
         )
-        input_ae = self.deep_seg(input_ae)
 
-        # Tree counting
-        # We will start counting at the end of the net.
-        count = self.seg(input_s)
-        for c in self.precounter:
-            count = F.max_pool2d(c(count), 2)
-        count = torch.sum(count, dim=(2, 3))
-        for c in self.counter:
-            count = c(count)
+        # This is the last part of deep supervision
+        input_ae = self.deep_seg(input_ae)
 
         # Since we are dealing with a binary problem, there is no need to use
         # softmax.
         multi_seg = torch.sigmoid(self.seg(input_s))
         unc = torch.sigmoid(self.unc(input_s))
         low_seg = torch.sigmoid(self.seg(input_ae))
-        tops = self.final_counter(count)
-        return multi_seg, unc, low_seg, tops
+        return multi_seg, unc, low_seg
 
     def dropout_update(self):
         super().dropout_update()

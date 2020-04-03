@@ -257,7 +257,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
                 [length // ratio for length in test_x.shape[1:]]
             )
         )
-        yi, unci, topsi = net.test([downtest_x], patch_size=None)
+        yi, unci = net.test([downtest_x], patch_size=None)
 
         upyi = imresize(yi[0], test_x.shape[1:])
         upunci = imresize(unci[0], test_x.shape[1:])
@@ -282,8 +282,8 @@ def train_test_net(net_name, ratio=10, verbose=1):
 
         print(
             'Mosaic {:} TPF = {:5.3f} / FPF = {:5.3f} / '
-            'tops = (seg: {:3d}, count: {:5.3f}, gt: {:3d})'.format(
-                case, tpf, fpf, unet_tops, topsi[0], gt_tops
+            'tops = (seg: {:3d}, gt: {:3d})'.format(
+                case, tpf, fpf, unet_tops, gt_tops
             )
         )
 
@@ -316,7 +316,7 @@ def main():
     )
 
     ''' <Detection task> '''
-    net_name = 'tree-detection-count.unet'
+    net_name = 'tree-detection.unet'
 
     train_test_net(net_name)
 

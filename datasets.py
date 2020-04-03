@@ -119,10 +119,10 @@ class CroppingDown2DDataset(Dataset):
 
         target = self.labels[case_idx][none_slice + slice_i].astype(np.uint8)
 
-        target_labs = bwlabeln(target.astype(np.bool))
-        tops = len(np.unique(target_labs[target.astype(np.bool)]))
+        # target_labs = bwlabeln(target.astype(np.bool))
+        # tops = len(np.unique(target_labs[target.astype(np.bool)]))
 
-        return inputs, (target, tops)
+        return inputs, target
 
     def __len__(self):
         return self.max_slice[-1]

@@ -255,13 +255,12 @@ def train_test_net(net_name, ratio=10, verbose=1):
             test_x,
             (test_x.shape[0],) + tuple(
                 [length // ratio for length in test_x.shape[1:]]
-            ),
-            order=2
+            )
         )
         yi, unci, topsi = net.test([downtest_x], patch_size=None)
 
-        upyi = imresize(yi[0], test_x.shape[1:], order=2)
-        upunci = imresize(unci[0], test_x.shape[1:], order=2)
+        upyi = imresize(yi[0], test_x.shape[1:])
+        upunci = imresize(unci[0], test_x.shape[1:])
 
         gt_bool = test_y.astype(np.bool)
         gt_labeled = bwlabeln(gt_bool)
@@ -284,7 +283,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
         print(
             'Mosaic {:} TPF = {:5.3f} / FPF = {:5.3f} / '
             'tops = (seg: {:3d}, count: {:5.3f}, gt: {:3d})'.format(
-                case, tpf, fpf, unet_tops, topsi, gt_tops
+                case, tpf, fpf, unet_tops, topsi[0], gt_tops
             )
         )
 

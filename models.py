@@ -368,19 +368,17 @@ class Unet2D(BaseModel):
                 self.autoencoder.training
             )
             input_ae = F.max_pool2d(input_ae, 2)
-        # Tree counting
-        # We will start counting on the bottleneck of the unet.
-        count = torch.sum(input_ae, dim=(2, 3))
-        for c in self.precounter:
-            print(count.shape, c[0].weight.shape, c[0].bias.shape, input_ae.shape)
-            count = c(count)
-
-        # This is the last part of deep supervision
         input_ae = F.dropout2d(
             self.autoencoder.u(input_ae),
             self.autoencoder.dropout,
             self.autoencoder.training
         )
+        # Tree counting
+        # We will start counting on the bottleneck of the unet.
+        count = torch.sum(input_ae, dim=(2, 3))
+        for c in self.precounter:
+            count = c(count)
+        # This is the last part of deep supervision
         input_ae = self.deep_seg(input_ae)
 
         # Since we are dealing with a binary problem, there is no need to use

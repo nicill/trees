@@ -282,7 +282,7 @@ class Unet2D(BaseModel):
                 'name': 'count',
                 'weight': 1,
                 'f': lambda p, t: F.mse_loss(
-                    p[3], t[1].astype(p[3])
+                    p[3], t[1].type_as(p[3])
                 )
             },
             # Uncertainty loss based on the flip loss (by Mckinley et al).

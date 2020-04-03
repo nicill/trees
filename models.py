@@ -371,6 +371,7 @@ class Unet2D(BaseModel):
         # Tree counting
         # We will start counting on the bottleneck of the unet.
         count = torch.sum(input_ae, dim=(2, 3))
+        count = self.counter(count)
 
         # This is the last part of deep supervision
         input_ae = F.dropout2d(

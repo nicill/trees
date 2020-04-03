@@ -205,7 +205,7 @@ class Unet2D(BaseModel):
         # with linear layers).
         self.precounter = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2D(f_in, f_out),
+                nn.Conv2d(f_in, f_out),
                 nn.ReLU(),
                 nn.BatchNorm2d(f_in, f_out)
             )

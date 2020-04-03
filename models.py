@@ -201,14 +201,14 @@ class Unet2D(BaseModel):
         # Here I use SELU instead of ReLU because it's self normalising and
         # avoids the need of using BatchNorm (I am not sure how well it works
         # with linear layers).
-        self.counter = nn.ModuleList([
+        self.precounter = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(f_in, f_out),
                 nn.SELU()
             )
             for f_in, f_out in zip(conv_filters[:0:-1], conv_filters[-2::-1])
         ])
-        self.counter.to(device)
+        self.precounter.to(device)
         self.final_counter = nn.Linear(conv_filters[0], 1)
         self.final_counter.to(device)
 
@@ -371,7 +371,7 @@ class Unet2D(BaseModel):
         # Tree counting
         # We will start counting on the bottleneck of the unet.
         count = torch.sum(input_ae, dim=(2, 3))
-        for c in self.counter(count):
+        for c in self.precounter(count):
             count = c(count)
 
         # This is the last part of deep supervision

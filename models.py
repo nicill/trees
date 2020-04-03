@@ -209,7 +209,7 @@ class Unet2D(BaseModel):
                 nn.ReLU(),
                 nn.BatchNorm2d(f_in, f_out)
             )
-            for f_in, f_out in zip(conv_filters[:-1], conv_filters[1:])
+            for f_in, f_out in zip([1] + conv_filters[:-1], conv_filters)
         ])
         self.precounter.to(device)
         self.counter = nn.ModuleList([

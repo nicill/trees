@@ -372,7 +372,7 @@ class Unet2D(BaseModel):
         # We will start counting on the bottleneck of the unet.
         count = torch.sum(input_ae, dim=(2, 3))
         for c in self.precounter:
-            print(count.shape, c.weight.shape, c.bias.shape, input_ae.shape)
+            print(count.shape, c[0].weight.shape, c[0].bias.shape, input_ae.shape)
             count = c(count)
 
         # This is the last part of deep supervision

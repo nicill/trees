@@ -205,7 +205,7 @@ class Unet2D(BaseModel):
         # with linear layers).
         self.precounter = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(f_in, f_out, 3),
+                nn.Conv2d(f_in, f_out, 3, padding=1),
                 nn.ReLU(),
                 nn.BatchNorm2d(f_out)
             )
@@ -398,8 +398,8 @@ class Unet2D(BaseModel):
         # We will start counting at the end of the net.
         count = self.seg(input_s)
         for c in self.precounter:
-            count = c(count)
-        count = torch.sum(self.seg(count), dim=(2, 3))
+            count = F.max_pool2d(c(count), 2)
+        count = torch.sum(count, dim=(2, 3))
         for c in self.counter:
             count = c(count)
 

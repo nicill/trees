@@ -277,12 +277,12 @@ class Unet2D(BaseModel):
                     ).to(p[2].device)
                 )
             },
-            # Counting loss
+            # Counting loss.
             {
                 'name': 'count',
                 'weight': 1,
                 'f': lambda p, t: F.mse_loss(
-                    p[3], t[1].type_as(p[3])
+                    torch.squeeze(p[3]), t[1].type_as(p[3])
                 )
             },
             # Uncertainty loss based on the flip loss (by Mckinley et al).
@@ -315,6 +315,14 @@ class Unet2D(BaseModel):
                 'name': 'dsc',
                 'weight': 1,
                 'f': lambda p, t: dsc_loss(p[0], t[0])
+            },
+            # Counting loss for validation.
+            {
+                'name': 'count',
+                'weight': 1,
+                'f': lambda p, t: F.mse_loss(
+                    torch.squeeze(p[3]), t[1].type_as(p[3])
+                )
             },
             # Losses based on uncertainty values.for
             # Their weight is 0 because I don't want them to affect early

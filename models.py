@@ -396,9 +396,10 @@ class Unet2D(BaseModel):
 
         # Tree counting
         # We will start counting at the end of the net.
-        count = torch.sum(self.seg(input_s), dim=(2, 3))
+        count = self.seg(input_s)
         for c in self.precounter:
             count = c(count)
+        count = torch.sum(self.seg(count), dim=(2, 3))
         for c in self.counter:
             count = c(count)
 

@@ -371,7 +371,8 @@ class Unet2D(BaseModel):
         # Tree counting
         # We will start counting on the bottleneck of the unet.
         count = torch.sum(input_ae, dim=(2, 3))
-        count = self.counter(count)
+        for c in self.counter(count):
+            count = c(count)
 
         # This is the last part of deep supervision
         input_ae = F.dropout2d(
@@ -387,7 +388,6 @@ class Unet2D(BaseModel):
         unc = torch.sigmoid(self.unc(input_s))
         low_seg = torch.sigmoid(self.seg(input_ae))
         tops = self.final_counter(count)
-
         return multi_seg, unc, low_seg, tops
 
     def dropout_update(self):

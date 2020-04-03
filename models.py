@@ -207,7 +207,7 @@ class Unet2D(BaseModel):
             nn.Sequential(
                 nn.Conv2d(f_in, f_out, 3),
                 nn.ReLU(),
-                nn.BatchNorm2d(f_in, f_out)
+                nn.BatchNorm2d(f_in)
             )
             for f_in, f_out in zip([1] + conv_filters[:-1], conv_filters)
         ])

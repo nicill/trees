@@ -412,16 +412,11 @@ class Unet2D(BaseModel):
                 unc_i = np.zeros(im.shape[1:])
                 tops_i = 0
 
-                # The following lines are just a complicated way of finding all
-                # the possible combinations of patch indices.
                 limits = tuple(
-                    list(range(0, lim, patch_size))[:-1] + [lim]
-                    for lim in im.shape[1:]
+                    list(range(0, lim, patch_size))[:-1] + [lim - patch_size]
+                    for lim in data.shape[1:]
                 )
-                limits_product = list(itertools.product(
-                    range(len(limits[0]) - 1), range(len(limits[1]) - 1)
-                ))
-                n_patches = len(limits_product)
+                limits_product = list(itertools.product(*limits))
 
                 # The following code is just a normal test loop with all the
                 # previously computed patches.
@@ -429,8 +424,8 @@ class Unet2D(BaseModel):
                     # Here we just take the current patch defined by its slice
                     # in the x and y axes. Then we convert it into a torch
                     # tensor for testing.
-                    xslice = slice(limits[0][xi], limits[0][xi + 1] + 1)
-                    yslice = slice(limits[1][xj], limits[1][xj + 1] + 1)
+                    xslice = slice(xi, xi + patch_size)
+                    yslice = slice(xj, xj + patch_size)
                     data_tensor = to_torch_var(
                         np.expand_dims(im[slice(None), xslice, yslice], axis=0)
                     )

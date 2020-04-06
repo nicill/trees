@@ -199,21 +199,6 @@ class Unet2D(BaseModel):
         )
         self.deep_seg.to(device)
 
-        # These layers will be used to count the tops on a regression way.
-        # Here I use SELU instead of ReLU because it's self normalising and
-        # avoids the need of using BatchNorm (I am not sure how well it works
-        # with linear layers).
-        self.precounter = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(f_in, f_out),
-                nn.SELU()
-            )
-            for f_in, f_out in zip(conv_filters[:0:-1], conv_filters[-2::-1])
-        ])
-        self.precounter.to(device)
-        self.final_counter = nn.Linear(conv_filters[0], 1)
-        self.final_counter.to(device)
-
         # Final segmentation block.
         self.seg = nn.Sequential(
             nn.Conv2d(conv_filters[0], conv_filters[0], 1),

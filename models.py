@@ -374,7 +374,6 @@ class Unet2D(BaseModel):
         self.eval()
         seg = list()
         unc = list()
-        tops = list()
 
         # Init
         t_in = time.time()
@@ -402,6 +401,8 @@ class Unet2D(BaseModel):
                     for lim in data.shape[1:]
                 )
                 limits_product = list(itertools.product(*limits))
+
+                n_patches = len(limits_product)
 
                 # The following code is just a normal test loop with all the
                 # previously computed patches.
@@ -457,7 +458,7 @@ class Unet2D(BaseModel):
                 # Testing
                 with torch.no_grad():
                     torch.cuda.synchronize(self.device)
-                    seg_pi, unc_pi, _, tops_pi = self(data_tensor)
+                    seg_pi, unc_pi, _ = self(data_tensor)
                     torch.cuda.synchronize(self.device)
                     torch.cuda.empty_cache()
 
@@ -466,7 +467,6 @@ class Unet2D(BaseModel):
                 # batch is just an image, that batch number is useless.
                 seg_i = np.squeeze(seg_pi.cpu().numpy())
                 unc_i = np.squeeze(unc_pi.cpu().numpy())
-                tops_i = np.squeeze(tops_pi.cpu().numpy())
 
                 # Printing
                 init_c = '\033[0m' if self.training else '\033[38;5;238m'
@@ -495,5 +495,5 @@ class Unet2D(BaseModel):
 
             seg.append(seg_i)
             unc.append(unc_i)
-            tops.append(tops_i)
-        return seg, unc, tops
+
+        return seg, unc

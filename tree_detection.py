@@ -5,11 +5,13 @@ import cv2
 import time
 import numpy as np
 from skimage.transform import resize as imresize
-from skimage.measure import label as bwlabeln
 from torch.utils.data import DataLoader
 from data_manipulation.utils import color_codes
 from datasets import Cropping2DDataset, CroppingDown2DDataset
 from models import Unet2D
+from metrics import hausdorf_distance, avg_euclidean_distance
+from metrics import matched_percentage
+from utils import list_from_mask
 
 
 def parse_inputs():
@@ -55,6 +57,11 @@ def parse_inputs():
     options = vars(parser.parse_args())
 
     return options
+
+
+"""
+Networks
+"""
 
 
 def train_test_net(net_name, ratio=10, verbose=1):
@@ -263,27 +270,22 @@ def train_test_net(net_name, ratio=10, verbose=1):
         upunci = imresize(unci[0], test_x.shape[1:])
 
         gt_bool = test_y.astype(np.bool)
-        gt_labeled = bwlabeln(gt_bool)
         unet_bool = upyi > 0.5
-        unet_labeled = bwlabeln(unet_bool)
 
-        gt_labs = np.unique(gt_labeled[gt_bool])
-        unet_labs = np.unique(unet_labeled[unet_bool])
-        tp_labs = np.unique(gt_labeled[unet_bool])
-        notfp_labs = np.unique(unet_labeled[gt_bool])
-        fp_labs = np.logical_not(np.isin(unet_labs, notfp_labs))
-        tp = len(tp_labs[tp_labs > 0])
-        fp = np.count_nonzero(fp_labs)
-        gt_tops = len(gt_labs)
-        unet_tops = len(unet_labs)
+        gt_list = list_from_mask(gt_bool)
+        unet_list = list_from_mask(unet_bool)
+        n_gt = len(gt_list)
+        n_unet = len(unet_list)
 
-        tpf = tp / gt_tops
-        fpf = fp / unet_tops
+        hd = hausdorf_distance(gt_list, unet_list)
+        match = matched_percentage(gt_list, unet_list, 150)
+        diff = 100 * (n_gt - n_unet) / n_gt
+        avg_ed = avg_euclidean_distance(gt_list, unet_list)
 
         print(
-            'Mosaic {:} TPF = {:5.3f} / FPF = {:5.3f} / '
-            'tops = (seg: {:3d}, gt: {:3d})'.format(
-                case, tpf, fpf, unet_tops, gt_tops
+            'Mosaic {:} Hausdorf = {:5.3f} / Euclidean = {:5.3f}'
+            'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, diff: {:5.3f})'.format(
+                case, hd, avg_ed, n_unet, n_gt, match, diff
             )
         )
 

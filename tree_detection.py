@@ -269,11 +269,10 @@ def train_test_net(net_name, ratio=10, verbose=1):
         upyi = imresize(yi[0], test_x.shape[1:])
         upunci = imresize(unci[0], test_x.shape[1:])
 
-        gt_bool = test_y.astype(np.bool)
         unet_bool = upyi > 0.5
 
-        gt_list = list_from_mask(cv2.UMat(gt_bool))
-        unet_list = list_from_mask(cv2.UMat(unet_bool))
+        gt_list = list_from_mask(test_y.astype(np.uint8))
+        unet_list = list_from_mask(unet_bool.astype(np.uint8))
         n_gt = len(gt_list)
         n_unet = len(unet_list)
 

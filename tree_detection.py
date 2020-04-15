@@ -76,10 +76,14 @@ def train_test_net(net_name, ratio=10, verbose=1):
 
     # Data loading (or preparation)
     d_path = options['val_dir']
-    gt_names = sorted(list(filter(
-        lambda xi: not os.path.isdir(xi) and re.search(options['lab_tag'], xi),
-        os.listdir(d_path)
-    )))
+    gt_names = sorted(
+        filter(
+            lambda xi: not os.path.isdir(xi)
+                       and re.search(options['lab_tag'], xi),
+            os.listdir(d_path)
+        ),
+        key=lambda p: int(''.join(filter(str.isdigit, p)))
+    )
     n_folds = len(gt_names)
     cases = [re.search(r'(\d+)', r).group() for r in gt_names]
 
@@ -282,7 +286,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
         avg_ed = avg_euclidean_distance(gt_list, unet_list)
 
         print(
-            'Mosaic {:} Hausdorf = {:5.3f} / Euclidean = {:5.3f}'
+            'Mosaic {:} Hausdorf = {:5.3f} / Euclidean = {:5.3f} '
             'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, diff: {:5.3f})'.format(
                 case, hd, avg_ed, n_unet, n_gt, match, diff
             )

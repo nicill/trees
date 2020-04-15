@@ -272,8 +272,8 @@ def train_test_net(net_name, ratio=10, verbose=1):
         gt_bool = test_y.astype(np.bool)
         unet_bool = upyi > 0.5
 
-        gt_list = list_from_mask(gt_bool)
-        unet_list = list_from_mask(unet_bool)
+        gt_list = list_from_mask(cv2.UMat(gt_bool))
+        unet_list = list_from_mask(cv2.UMat(unet_bool))
         n_gt = len(gt_list)
         n_unet = len(unet_list)
 

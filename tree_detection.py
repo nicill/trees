@@ -284,14 +284,16 @@ def train_test_net(net_name, ratio=10, verbose=1):
 
         hd = hausdorf_distance(gt_list, unet_list)
         match = matched_percentage(gt_list, unet_list, 150)
+        inv_match = matched_percentage(unet_list, gt_list, 150)
         diff = 100 * (n_gt - n_unet) / n_gt
         avg_ed = avg_euclidean_distance(gt_list, unet_list)
 
         if trees is None:
             print(
                 'Mosaic {:} Hausdorf = {:5.3f} / Euclidean = {:5.3f} '
-                'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, diff: {:5.3f})'.format(
-                    case, hd, avg_ed, n_unet, n_gt, match, diff
+                'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, diff: {:5.3f}, '
+                'inverse match: {:5.3f}, diff: {:5.3f})'.format(
+                    case, hd, avg_ed, n_unet, n_gt, match, inv_match, diff
                 )
             )
 
@@ -323,6 +325,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
 
             fhd = hausdorf_distance(gt_list, funet_list)
             fmatch = matched_percentage(gt_list, funet_list, 150)
+            finv_match = matched_percentage(funet_list, gt_list, 150)
             fdiff = 100 * (n_gt - n_funet) / n_gt
             favg_ed = avg_euclidean_distance(gt_list, funet_list)
 
@@ -330,9 +333,11 @@ def train_test_net(net_name, ratio=10, verbose=1):
                 'Mosaic {:} Hausdorf = {:5.3f} vs {:5.3f} / '
                 'Euclidean = {:5.3f} vs {:5.3f} '
                 'tops (seg: {:3d} vs {:3d}, gt: {:3d}, '
-                'match: {:5.3f} vs {:5.3f}, diff: {:5.3f} vs {:5.3f})'.format(
+                'match: {:5.3f} vs {:5.3f}, inverse match: {:5.3f} vs {:5.3f}, '
+                'diff: {:5.3f} vs {:5.3f})'.format(
                     case, hd, fhd, avg_ed, favg_ed,
-                    n_unet, n_funet, n_gt, match, fmatch, diff, fdiff
+                    n_unet, n_funet, n_gt, match, fmatch,
+                    inv_match, finv_match, diff, fdiff
                 )
             )
             cv2.imwrite(

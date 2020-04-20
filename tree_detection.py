@@ -6,7 +6,7 @@ import time
 import numpy as np
 from skimage.transform import resize as imresize
 from torch.utils.data import DataLoader
-from data_manipulation.utils import color_codes
+from data_manipulation.utils import color_codes, find_file
 from datasets import Cropping2DDataset, CroppingDown2DDataset
 from models import Unet2D
 from metrics import hausdorf_distance, avg_euclidean_distance
@@ -271,6 +271,8 @@ def train_test_net(net_name, ratio=10, verbose=1):
         yi, unci = net.test([downtest_x], patch_size=None)
 
         upyi = imresize(yi[0], test_x.shape[1:])
+        trees = find_file('mosaic{:}tree'.format(case), d_path)
+
         upunci = imresize(unci[0], test_x.shape[1:])
 
         unet_bool = upyi > 0.5
@@ -285,12 +287,13 @@ def train_test_net(net_name, ratio=10, verbose=1):
         diff = 100 * (n_gt - n_unet) / n_gt
         avg_ed = avg_euclidean_distance(gt_list, unet_list)
 
-        print(
-            'Mosaic {:} Hausdorf = {:5.3f} / Euclidean = {:5.3f} '
-            'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, diff: {:5.3f})'.format(
-                case, hd, avg_ed, n_unet, n_gt, match, diff
+        if trees is None:
+            print(
+                'Mosaic {:} Hausdorf = {:5.3f} / Euclidean = {:5.3f} '
+                'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, diff: {:5.3f})'.format(
+                    case, hd, avg_ed, n_unet, n_gt, match, diff
+                )
             )
-        )
 
         cv2.imwrite(
             os.path.join(d_path, 'pred.ds{:}_trees{:}.jpg'.format(ratio, case)),
@@ -308,6 +311,34 @@ def train_test_net(net_name, ratio=10, verbose=1):
             os.path.join(d_path, 'unc.d{:}_trees{:}.jpg'.format(ratio, case)),
             (upunci * 255).astype(np.uint8)
         )
+
+        if trees is not None:
+            bck = (np.mean(cv2.imread(trees), axis=-1) < 2).astype(np.uint8)
+            fupyi = upyi * bck
+
+            funet_bool = fupyi > 0.5
+
+            funet_list = list_from_mask(funet_bool.astype(np.uint8))
+            n_funet = len(funet_list)
+
+            fhd = hausdorf_distance(gt_list, funet_list)
+            fmatch = matched_percentage(gt_list, funet_list, 150)
+            fdiff = 100 * (n_gt - n_funet) / n_gt
+            favg_ed = avg_euclidean_distance(gt_list, funet_list)
+
+            print(
+                'Mosaic {:} Hausdorf = {:5.3f} vs {:5.3f} / '
+                'Euclidean = {:5.3f} vs {:5.3f} '
+                'tops (seg: {:3d} vs {:3d}, gt: {:3d}, '
+                'match: {:5.3f} vs {:5.3f}, diff: {:5.3f} vs {:5.3f})'.format(
+                    case, hd, fhd, avg_ed, favg_ed,
+                    n_unet, n_funet, n_gt, match, fmatch, diff, fdiff
+                )
+            )
+            cv2.imwrite(
+                os.path.join(d_path, 'pred.fd{:}_trees{:}.jpg'.format(ratio, case)),
+                (upyi * 255).astype(np.uint8)
+            )
 
 
 def main():

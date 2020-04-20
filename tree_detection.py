@@ -321,7 +321,9 @@ def train_test_net(net_name, ratio=10, verbose=1):
             funet_bool = fupyi > 0.5
 
             funet_list = list_from_mask(funet_bool.astype(np.uint8))
+            fgt_list = list_from_mask(test_y.astype(np.uint8) * bck)
             n_funet = len(funet_list)
+            n_fgt = len(fgt_list)
 
             fhd = hausdorf_distance(gt_list, funet_list)
             fmatch = matched_percentage(gt_list, funet_list, 150)
@@ -332,11 +334,11 @@ def train_test_net(net_name, ratio=10, verbose=1):
             print(
                 'Mosaic {:} Hausdorf = {:5.3f} vs {:5.3f} / '
                 'Euclidean = {:5.3f} vs {:5.3f} '
-                'tops (seg: {:3d} vs {:3d}, gt: {:3d}, '
+                'tops (seg: {:3d} vs {:3d}, gt: {:3d} vs {:3d}, '
                 'match: {:5.3f} vs {:5.3f}, inverse match: {:5.3f} vs {:5.3f}, '
                 'diff: {:5.3f} vs {:5.3f})'.format(
                     case, hd, fhd, avg_ed, favg_ed,
-                    n_unet, n_funet, n_gt, match, fmatch,
+                    n_unet, n_funet, n_gt, n_fgt, match, fmatch,
                     inv_match, finv_match, diff, fdiff
                 )
             )

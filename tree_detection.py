@@ -325,11 +325,11 @@ def train_test_net(net_name, ratio=10, verbose=1):
             n_funet = len(funet_list)
             n_fgt = len(fgt_list)
 
-            fhd = hausdorf_distance(gt_list, funet_list)
-            fmatch = matched_percentage(gt_list, funet_list, 150)
-            finv_match = matched_percentage(funet_list, gt_list, 150)
-            fdiff = 100 * (n_gt - n_funet) / n_gt
-            favg_ed = avg_euclidean_distance(gt_list, funet_list)
+            fhd = hausdorf_distance(fgt_list, funet_list)
+            fmatch = matched_percentage(fgt_list, funet_list, 150)
+            finv_match = matched_percentage(funet_list, fgt_list, 150)
+            fdiff = 100 * (n_fgt - n_funet) / n_fgt
+            favg_ed = avg_euclidean_distance(fgt_list, funet_list)
 
             print(
                 'Mosaic {:} Hausdorf = {:5.3f} vs {:5.3f} / '

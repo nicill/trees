@@ -291,7 +291,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
         if trees is None:
             print(
                 'Mosaic {:} Hausdorf = {:5.3f} / Euclidean = {:5.3f} '
-                'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, diff: {:5.3f}, '
+                'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, '
                 'inverse match: {:5.3f}, diff: {:5.3f})'.format(
                     case, hd, avg_ed, n_unet, n_gt, match, inv_match, diff
                 )

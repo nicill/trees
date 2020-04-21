@@ -419,7 +419,7 @@ class Unet2D(BaseModel):
                     # Testing itself.
                     with torch.no_grad():
                         torch.cuda.synchronize()
-                        seg_pi, unc_pi, _, tops_pi = self(data_tensor)
+                        seg_pi, unc_pi, _ = self(data_tensor)
                         torch.cuda.synchronize()
                         torch.cuda.empty_cache()
 

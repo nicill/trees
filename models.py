@@ -426,7 +426,6 @@ class Unet2D(BaseModel):
                     # Then we just fill the results image.
                     seg_i[xslice, yslice] = np.squeeze(seg_pi.cpu().numpy())
                     unc_i[xslice, yslice] = np.squeeze(unc_pi.cpu().numpy())
-                    tops_i += np.squeeze(tops_pi.cpu().numpy())
 
                     # Printing
                     init_c = '\033[0m' if self.training else '\033[38;5;238m'

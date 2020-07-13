@@ -46,6 +46,8 @@ class Cropping2DDataset(Dataset):
             self.labels[case_idx][slice_i].astype(np.uint8), axis=0
         )
 
+        print(inputs.shape, target.shape)
+
         # target_labs = bwlabeln(target.astype(np.bool))
         # tops = len(np.unique(target_labs[target.astype(np.bool)]))
 

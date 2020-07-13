@@ -35,7 +35,7 @@ class Cropping2DDataset(Dataset):
 
     def __getitem__(self, index):
         # We select the case
-        case_idx, slice_i = self.patch_slices[index]
+        slice_i, case_idx = self.patch_slices[index]
 
         # We get the slice indexes
         none_slice = (slice(None, None),)
@@ -77,6 +77,4 @@ class CroppingDown2DDataset(Cropping2DDataset):
             ).squeeze(dim=0).numpy().astype(np.bool)
             for lab in labels
         ]
-        for d, l in zip(downlabels, labels):
-            print(d.shape, l.shape, np.sum(d), np.sum(l))
         super().__init__(downdata, downlabels, patch_size, overlap, filtered)

@@ -1,9 +1,60 @@
+import itertools
 from skimage.transform import resize as imresize
 import numpy as np
 import torch
 from torch.utils.data.dataset import Dataset
-from data_manipulation.datasets import get_slices_bb
+from data_manipulation.datasets import centers_to_slice
 
+
+def get_slices(masks, patch_size, overlap):
+    """
+    Function to get all the patches with a given patch size and overlap between
+    consecutive patches from a given list of masks. We will only take patches
+    inside the bounding box of the mask. We could probably just pass the shape
+    because the masks should already be the bounding box.
+    :param masks: List of masks.
+    :param patch_size: Size of the patches.
+    :param overlap: Overlap on each dimension between consecutive patches.
+
+    """
+    # Init
+    # We will compute some intermediate stuff for later.
+    patch_half = [p_length // 2 for p_length in patch_size]
+    steps = [max(p_length - o, 1) for p_length, o in zip(patch_size, overlap)]
+
+    # We will need to define the min and max pixel indices. We define the
+    # centers for each patch, so the min and max should be defined by the
+    # patch halves.
+    min_bb = [patch_half] * len(masks)
+    max_bb = [
+        [
+            max_i - p_len for max_i, p_len in zip(mask.shape, patch_half)
+        ] for mask in masks
+    ]
+
+    for min_bb_i, max_bb_i in zip(min_bb, max_bb):
+        print(max_bb_i, max_bb_i)
+
+    # This is just a "pythonic" but complex way of defining all possible
+    # indices given a min, max and step values for each dimension.
+    dim_ranges = [
+        [
+            np.concatenate([np.arange(*t), [t[1]]])
+            for t in zip(min_bb_i, max_bb_i, steps)
+        ] for min_bb_i, max_bb_i in zip(min_bb, max_bb)
+    ]
+
+    # And this is another "pythonic" but not so intuitive way of computing
+    # all possible triplets of center voxel indices given the previous
+    # indices. I also added the slice computation (which makes the last step
+    # of defining the patches).
+    patch_slices = [
+        centers_to_slice(
+            itertools.product(*dim_range), patch_half
+        ) for dim_range in dim_ranges
+    ]
+
+    return patch_slices
 
 class Cropping2DDataset(Dataset):
     def __init__(

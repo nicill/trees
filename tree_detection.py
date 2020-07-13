@@ -96,7 +96,9 @@ def train_test_net(net_name, ratio=10, verbose=1):
     y = [
         (
                 np.mean(
-                    cv2.imread(os.path.join(d_path, im)), axis=-1) < 2
+                    cv2.imread(os.path.join(d_path, im)),
+                    axis=-1
+                ) < 10
         ).astype(np.uint8)
         for im in gt_names
     ]

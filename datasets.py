@@ -26,8 +26,7 @@ class Cropping2DDataset(Dataset):
         if filtered:
             self.patch_slices = [
                 (s, i) for i, (label, slices_i) in enumerate(zip(self.labels, slices))
-                for s in slices_i
-                if np.sum(label[(slice(None, None),) + s]) > 0
+                for s in slices_i if np.sum(label[s]) > 0
             ]
         else:
             self.patch_slices = [
@@ -73,9 +72,9 @@ class CroppingDown2DDataset(Cropping2DDataset):
         downlabels = [
             torch.max_pool2d(
                 torch.tensor(np.expand_dims(lab, 0)).type(torch.float32), ratio
-            ).numpy().astype(np.bool)
+            ).squeeze(dim=0).numpy().astype(np.bool)
             for lab in labels
         ]
         for d, l in zip(downlabels, labels):
-            print(d.shape, l.shape)
+            print(d.shape, l.shape, np.sum(d), np.sum(l))
         super().__init__(downdata, downlabels, patch_size, overlap, filtered)

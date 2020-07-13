@@ -100,7 +100,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
         for im in gt_names
     ]
     dems = [
-        cv2.imread(os.path.join(d_path, 'Zn{:}DEM.jpg'.format(c_i)))
+        cv2.imread(os.path.join(d_path, 'Z{:}nDEM.jpg'.format(c_i)))
         for c_i in cases
     ]
     mosaics = [

@@ -43,7 +43,7 @@ class Cropping2DDataset(Dataset):
         inputs = self.data[case_idx][none_slice + slice_i].astype(np.float32)
 
         target = np.expand_dims(
-            self.labels[case_idx][slice_i].astype(np.uint8), dim=0
+            self.labels[case_idx][slice_i].astype(np.uint8), axis=0
         )
 
         # target_labs = bwlabeln(target.astype(np.bool))

@@ -87,6 +87,10 @@ def train_test_net(net_name, ratio=10, verbose=1):
     )
     n_folds = len(gt_names)
     cases = [re.search(r'(\d+)', r).group() for r in gt_names]
+    gt_names = [
+        gt for c, gt in zip(cases, gt_names)
+        if find_file('Z{:}.jpg'.format(c), d_path)
+    ]
     cases = [c for c in cases if find_file('Z{:}.jpg'.format(c), d_path)]
 
     print(

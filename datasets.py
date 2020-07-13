@@ -32,9 +32,6 @@ def get_slices(masks, patch_size, overlap):
         ] for mask in masks
     ]
 
-    for min_bb_i, max_bb_i in zip(min_bb, max_bb):
-        print(max_bb_i, max_bb_i)
-
     # This is just a "pythonic" but complex way of defining all possible
     # indices given a min, max and step values for each dimension.
     dim_ranges = [
@@ -96,8 +93,6 @@ class Cropping2DDataset(Dataset):
         target = np.expand_dims(
             self.labels[case_idx][slice_i].astype(np.uint8), axis=0
         )
-
-        print(inputs.shape, target.shape)
 
         # target_labs = bwlabeln(target.astype(np.bool))
         # tops = len(np.unique(target_labs[target.astype(np.bool)]))

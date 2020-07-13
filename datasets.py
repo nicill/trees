@@ -71,7 +71,7 @@ class Cropping2DDataset(Dataset):
         self.patch_size = patch_size
         self.overlap = overlap
 
-        slices = get_slices_bb(
+        slices = get_slices(
             self.labels, self.patch_size, self.overlap
         )
         if filtered:

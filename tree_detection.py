@@ -21,7 +21,8 @@ def parse_inputs():
     # Mode selector
     parser.add_argument(
         '-d', '--mosaics-directory',
-        dest='val_dir', default='/home/mariano/Dropbox/DEM_Annotations',
+        dest='val_dir', # default='/home/mariano/Dropbox/DEM_Annotations',
+        default='/home/mariano/Dropbox/280420',
         help='Directory containing the mosaics'
     )
     parser.add_argument(
@@ -99,22 +100,22 @@ def train_test_net(net_name, ratio=10, verbose=1):
         for im in gt_names
     ]
     dems = [
-        cv2.imread(os.path.join(d_path, 'DEM{:}.jpg'.format(c_i)))
+        cv2.imread(os.path.join(d_path, 'Zn{:}DEM.jpg'.format(c_i)))
         for c_i in cases
     ]
     mosaics = [
-        cv2.imread(os.path.join(d_path, 'mosaic{:}.jpg'.format(c_i)))
+        cv2.imread(os.path.join(d_path, 'Z{:}.jpg'.format(c_i)))
         for c_i in cases
     ]
-    hsv_mosaics = [
-        cv2.cvtColor(mosaic, cv2.COLOR_BGR2HSV) for mosaic in mosaics
-    ]
-    hsv_mosaics = [
-        np.stack([mosaic[..., 0], mosaic[..., 1], dem[..., 0]], -1)
-        for mosaic, dem in zip(hsv_mosaics, dems)
-    ]
-    for mi, c_i in zip(hsv_mosaics, cases):
-        cv2.imwrite(os.path.join(d_path, 'hsv_mosaic{:}.jpg'.format(c_i)), mi)
+    # hsv_mosaics = [
+    #     cv2.cvtColor(mosaic, cv2.COLOR_BGR2HSV) for mosaic in mosaics
+    # ]
+    # hsv_mosaics = [
+    #     np.stack([mosaic[..., 0], mosaic[..., 1], dem[..., 0]], -1)
+    #     for mosaic, dem in zip(hsv_mosaics, dems)
+    # ]
+    # for mi, c_i in zip(hsv_mosaics, cases):
+    #     cv2.imwrite(os.path.join(d_path, 'hsv_mosaic{:}.jpg'.format(c_i)), mi)
     x = [
         np.moveaxis(
             np.concatenate([mosaic, np.expand_dims(dem[..., 0], -1)], -1),

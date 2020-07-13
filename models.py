@@ -227,7 +227,7 @@ class Unet2D(BaseModel):
                 'weight': 1,
                 'f': lambda p, t: focal_loss(
                     torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t[0], dim=1).type_as(p[0]).to(p[0].device),
+                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
                     alpha=0.5
                 )
             },
@@ -239,7 +239,7 @@ class Unet2D(BaseModel):
                     torch.squeeze(p[2], dim=1),
                     torch.squeeze(
                         F.max_pool2d(
-                            t[0].type_as(p[2]),
+                            t.type_as(p[2]),
                             2 ** len(self.autoencoder.down)),
                         dim=1
                     ).to(p[2].device),
@@ -250,7 +250,7 @@ class Unet2D(BaseModel):
             {
                 'name': 'dsc',
                 'weight': 1,
-                'f': lambda p, t: dsc_loss(p[0], t[0])
+                'f': lambda p, t: dsc_loss(p[0], t)
             },
             # DSC loss for the deep supervision branch (bottleneck).
             {
@@ -259,7 +259,7 @@ class Unet2D(BaseModel):
                 'f': lambda p, t: dsc_loss(
                     p[2],
                     F.max_pool2d(
-                        t[0].type_as(p[2]),
+                        t.type_as(p[2]),
                         2 ** len(self.autoencoder.down)
                     ).to(p[2].device)
                 )
@@ -270,7 +270,7 @@ class Unet2D(BaseModel):
                 'weight': 1,
                 'f': lambda p, t: flip_loss(
                     torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t[0], dim=1).type_as(p[0]).to(p[0].device),
+                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
                     torch.squeeze(p[1], dim=1),
                     q_factor=1,
                     base=partial(focal_loss, alpha=0.5)
@@ -285,7 +285,7 @@ class Unet2D(BaseModel):
                 'weight': 0,
                 'f': lambda p, t: focal_loss(
                     torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t[0], dim=1).type_as(p[0]).to(p[0].device),
+                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
                     alpha=0.5
                 )
             },
@@ -293,7 +293,7 @@ class Unet2D(BaseModel):
             {
                 'name': 'dsc',
                 'weight': 1,
-                'f': lambda p, t: dsc_loss(p[0], t[0])
+                'f': lambda p, t: dsc_loss(p[0], t)
             },
             # Losses based on uncertainty values.for
             # Their weight is 0 because I don't want them to affect early
@@ -394,7 +394,6 @@ class Unet2D(BaseModel):
                 # Initial results. Filled to 0.
                 seg_i = np.zeros(im.shape[1:])
                 unc_i = np.zeros(im.shape[1:])
-                tops_i = 0
 
                 limits = tuple(
                     list(range(0, lim, patch_size))[:-1] + [lim - patch_size]

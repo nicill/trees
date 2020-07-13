@@ -1,5 +1,4 @@
 from skimage.transform import resize as imresize
-from skimage.measure import label as bwlabeln
 import numpy as np
 import torch
 from torch.utils.data.dataset import Dataset

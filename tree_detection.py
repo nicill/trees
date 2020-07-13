@@ -118,9 +118,15 @@ def train_test_net(net_name, ratio=10, verbose=1):
     #     cv2.imwrite(os.path.join(d_path, 'hsv_mosaic{:}.jpg'.format(c_i)), mi)
     for mosaic, dem, c_i in zip(mosaics, dems, cases):
         print(
-            os.path.join(d_path, 'Z{:}nDEM.jpg'.format(c_i)),
-            dem.shape,
-            os.path.join(d_path, 'Z{:}.jpg'.format(c_i)),
+            os.path.join(d_path, 'Z{:}nDEM.jpg'.format(c_i))
+        )
+        print(
+            dem.shape
+        )
+        print(
+            os.path.join(d_path, 'Z{:}.jpg'.format(c_i))
+        )
+        print(
             mosaic.shape
         )
     x = [

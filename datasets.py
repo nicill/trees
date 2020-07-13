@@ -76,4 +76,6 @@ class CroppingDown2DDataset(Cropping2DDataset):
             ).numpy().astype(np.bool)
             for lab in labels
         ]
+        for d, l in zip(downlabels, labels):
+            print(d.shape, l.shape)
         super().__init__(downdata, downlabels, patch_size, overlap, filtered)

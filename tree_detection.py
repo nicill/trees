@@ -165,6 +165,7 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
             c['c'], time.strftime("%H:%M:%S"), c['g'], n_folds, c['nc']
         )
     )
+    training_start = time.time()
     for i, case in enumerate(cases):
         if verbose > 0:
             print(
@@ -193,7 +194,6 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
         )
         net = Unet2D(n_inputs=len(norm_x[0]))
 
-        training_start = time.time()
         try:
             net.load_model(os.path.join(d_path, model_name))
         except IOError:
@@ -270,15 +270,6 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
             net.save_model(os.path.join(d_path, model_name))
 
         if verbose > 0:
-            time_str = time.strftime(
-                '%H hours %M minutes %S seconds',
-                time.gmtime(time.time() - training_start)
-            )
-            print(
-                '%sTraining finished%s (total time %s)\n' %
-                (c['r'], c['nc'], time_str)
-            )
-
             print(
                 '%s[%s]%s Starting testing with mosaic %s %s(%d/%d)%s' %
                 (
@@ -323,6 +314,16 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
                 ratio,  dem_name, case
             )),
             (upunci * 255).astype(np.uint8)
+        )
+
+    if verbose > 0:
+        time_str = time.strftime(
+            '%H hours %M minutes %S seconds',
+            time.gmtime(time.time() - training_start)
+        )
+        print(
+            '%sTraining finished%s (total time %s)\n' %
+            (c['r'], c['nc'], time_str)
         )
 
 

@@ -60,6 +60,10 @@ def parse_inputs():
     return options
 
 
+def find_number(string):
+    return int(''.join(filter(str.isdigit, string)))
+
+
 """
 Networks
 """
@@ -83,10 +87,10 @@ def train_test_net(net_name, ratio=10, verbose=1):
                        and re.search(options['lab_tag'], xi),
             os.listdir(d_path)
         ),
-        key=lambda p: int(''.join(filter(str.isdigit, p)))
+        key=find_number
     )
     n_folds = len(gt_names)
-    cases_pre = [re.search(r'(\d+\d+)', r).group() for r in gt_names]
+    cases_pre = [find_number(r) for r in gt_names]
     gt_names = [
         gt for c, gt in zip(cases_pre, gt_names)
         if find_file('Z{:}.jpg'.format(c), d_path)

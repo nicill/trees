@@ -280,31 +280,8 @@ def train_test_net(net_name, ratio=10, verbose=1):
         yi, unci = net.test([downtest_x], patch_size=None)
 
         upyi = imresize(yi[0], test_x.shape[1:])
-        trees = find_file('mosaic{:}tree'.format(case), d_path)
 
         upunci = imresize(unci[0], test_x.shape[1:])
-
-        unet_bool = upyi > 0.5
-
-        gt_list = list_from_mask(test_y.astype(np.uint8))
-        unet_list = list_from_mask(unet_bool.astype(np.uint8))
-        n_gt = len(gt_list)
-        n_unet = len(unet_list)
-
-        hd = hausdorf_distance(gt_list, unet_list)
-        match = matched_percentage(gt_list, unet_list, 150)
-        inv_match = matched_percentage(unet_list, gt_list, 150)
-        diff = 100 * (n_gt - n_unet) / n_gt
-        avg_ed = avg_euclidean_distance(gt_list, unet_list)
-
-        if trees is None:
-            print(
-                'Mosaic {:} Hausdorf = {:5.3f} / Euclidean = {:5.3f} '
-                'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, '
-                'inverse match: {:5.3f}, diff: {:5.3f})'.format(
-                    case, hd, avg_ed, n_unet, n_gt, match, inv_match, diff
-                )
-            )
 
         cv2.imwrite(
             os.path.join(d_path, 'pred.ds{:}_trees{:}.jpg'.format(ratio, case)),
@@ -323,7 +300,38 @@ def train_test_net(net_name, ratio=10, verbose=1):
             (upunci * 255).astype(np.uint8)
         )
 
-        if trees is not None:
+    for i, case in enumerate(cases):
+        upyi = cv2.imread(
+            os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case))
+        ).astype(np.uint8)
+        unet_bool = upyi > 0.5
+
+        test_y = np.mean(
+            cv2.imread(os.path.join(d_path, gt_names[i])), axis=-1
+        ) < 10
+
+        gt_list = list_from_mask(test_y.astype(np.uint8))
+        unet_list = list_from_mask(unet_bool.astype(np.uint8))
+        n_gt = len(gt_list)
+        n_unet = len(unet_list)
+
+        hd = hausdorf_distance(gt_list, unet_list)
+        match = matched_percentage(gt_list, unet_list, 150)
+        inv_match = matched_percentage(unet_list, gt_list, 150)
+        diff = 100 * (n_gt - n_unet) / n_gt
+        avg_ed = avg_euclidean_distance(gt_list, unet_list)
+
+        trees = find_file('mosaic{:}tree'.format(case), d_path)
+
+        if trees is None:
+            print(
+                'Mosaic {:} Hausdorf = {:5.3f} / Euclidean = {:5.3f} '
+                'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, '
+                'inverse match: {:5.3f}, diff: {:5.3f})'.format(
+                    case, hd, avg_ed, n_unet, n_gt, match, inv_match, diff
+                )
+            )
+        else:
             bck = (np.mean(cv2.imread(trees), axis=-1) < 2).astype(np.uint8)
             fupyi = upyi * bck
 
@@ -344,7 +352,8 @@ def train_test_net(net_name, ratio=10, verbose=1):
                 'Mosaic {:} Hausdorf = {:5.3f} vs {:5.3f} / '
                 'Euclidean = {:5.3f} vs {:5.3f} '
                 'tops (seg: {:3d} vs {:3d}, gt: {:3d} vs {:3d}, '
-                'match: {:5.3f} vs {:5.3f}, inverse match: {:5.3f} vs {:5.3f}, '
+                'match: {:5.3f} vs {:5.3f}, '
+                'inverse match: {:5.3f} vs {:5.3f}, '
                 'diff: {:5.3f} vs {:5.3f})'.format(
                     case, hd, fhd, avg_ed, favg_ed,
                     n_unet, n_funet, n_gt, n_fgt, match, fmatch,
@@ -352,7 +361,9 @@ def train_test_net(net_name, ratio=10, verbose=1):
                 )
             )
             cv2.imwrite(
-                os.path.join(d_path, 'pred.fd{:}_trees{:}.jpg'.format(ratio, case)),
+                os.path.join(
+                    d_path, 'pred.fd{:}_trees{:}.jpg'.format(ratio, case)
+                ),
                 (upyi * 255).astype(np.uint8)
             )
 

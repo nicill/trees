@@ -459,7 +459,7 @@ def main():
     ]
     cases = [
         c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)
-    ][:-1]
+    ]
 
     print(
         '%s[%s] %s<Tree detection pipeline>%s' % (

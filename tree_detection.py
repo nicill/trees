@@ -93,7 +93,7 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
     n_folds = len(gt_names)
     cases = [
         c_i for c_i in cases
-        if find_file('Z{:}.jpg'.format(c_i + dem_name), d_path) and c_i != 4
+        if find_file('Z{:}.jpg'.format(c_i + dem_name), d_path) and c_i != '4'
     ]
 
     print(

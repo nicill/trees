@@ -317,10 +317,11 @@ def train_test_net(net_name, ratio=10, verbose=1):
     # train(cases, gt_names, net_name, ratio, verbose)
 
     for i, case in enumerate(cases):
-        upyi = cv2.imread(
-            os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case))
-        ).astype(np.uint8)
-        unet_bool = upyi > 0.5
+        unet_bool = np.mean(
+            cv2.imread(
+                os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case))
+            ), axis=-1
+        ) > 0.5
 
         test_y = np.mean(
             cv2.imread(os.path.join(d_path, gt_names[i])), axis=-1

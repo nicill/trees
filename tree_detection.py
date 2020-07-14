@@ -432,7 +432,9 @@ def main():
         gt for c, gt in zip(cases_pre, gt_names)
         if find_file('Z{:}.jpg'.format(c), d_path)
     ]
-    cases = [c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)]
+    cases = [
+        c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)
+    ][:-1]
 
     print(
         '%s[%s] %s<Tree detection pipeline>%s' % (

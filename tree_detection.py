@@ -105,6 +105,12 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
         ).astype(np.uint8)
         for im in gt_names
     ]
+    for c_i in cases:
+        dem_file = os.path.join(d_path, 'Z{:}.jpg'.format(c_i + dem_name))
+        dem = cv2.imread(dem_file)
+        mosaic_file = os.path.join(d_path, 'Z{:}.jpg'.format(c_i))
+        mosaic = cv2.imread(mosaic_file)
+        print(dem_file, dem.shape, mosaic_file, mosaic.shape)
     dems = [
         cv2.imread(os.path.join(d_path, 'Z{:}.jpg'.format(c_i + dem_name)))
         for c_i in cases

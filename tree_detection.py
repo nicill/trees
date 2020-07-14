@@ -321,8 +321,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
             cv2.imread(
                 os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case))
             ), axis=-1
-        )
-        print(np.unique(upyi))
+        ) / 255
         unet_bool = upyi > 0.5
 
         test_y = np.mean(

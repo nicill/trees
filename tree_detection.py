@@ -483,8 +483,7 @@ def main():
     net_name = 'tree-detection.DEM.unet'
     train(cases, gt_names, net_name, 'DEM')
 
-    eval(cases, gt_names, 'nDEM')
-    eval(cases, gt_names, 'DEM')
+    eval(cases, gt_names)
 
 
 if __name__ == '__main__':

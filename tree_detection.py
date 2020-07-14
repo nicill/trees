@@ -85,7 +85,7 @@ Networks
 """
 
 
-def train(cases, gt_names, net_name, ratio=10, verbose=0):
+def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=0):
     # Init
     options = parse_inputs()
     d_path = options['val_dir']
@@ -106,7 +106,7 @@ def train(cases, gt_names, net_name, ratio=10, verbose=0):
         for im in gt_names
     ]
     dems = [
-        cv2.imread(os.path.join(d_path, 'Z{:}nDEM.jpg'.format(c_i)))
+        cv2.imread(os.path.join(d_path, 'Z{:}.jpg'.format(c_i + dem_name)))
         for c_i in cases
     ]
     mosaics = [
@@ -288,7 +288,7 @@ def train(cases, gt_names, net_name, ratio=10, verbose=0):
         )
 
 
-def train_test_net(net_name, ratio=10, verbose=1):
+def train_test_net(net_name, dem_name='nDEM', ratio=10, verbose=1):
     """
 
     :param net_name:
@@ -307,14 +307,14 @@ def train_test_net(net_name, ratio=10, verbose=1):
         ),
         key=find_number
     )
-    cases_pre = [find_number(r) for r in gt_names]
+    cases_pre = [str(find_number(r)) for r in gt_names]
     gt_names = [
         gt for c, gt in zip(cases_pre, gt_names)
         if find_file('Z{:}.jpg'.format(c), d_path)
     ]
     cases = [c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)]
 
-    # train(cases, gt_names, net_name, ratio, verbose)
+    train(cases, gt_names, net_name, ratio, verbose)
 
     for i, case in enumerate(cases):
         upyi = np.mean(
@@ -397,9 +397,11 @@ def main():
     )
 
     ''' <Detection task> '''
-    net_name = 'tree-detection.unet'
+    net_name = 'tree-detection.nDEM.unet'
+    train_test_net(net_name, dem_name='nDEM')
 
-    train_test_net(net_name)
+    net_name = 'tree-detection.DEM.unet'
+    train_test_net(net_name, dem_name='DEM')
 
 
 if __name__ == '__main__':

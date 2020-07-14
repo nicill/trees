@@ -86,12 +86,13 @@ def train_test_net(net_name, ratio=10, verbose=1):
         key=lambda p: int(''.join(filter(str.isdigit, p)))
     )
     n_folds = len(gt_names)
-    cases = [re.search(r'(\d+)', r).group() for r in gt_names]
+    cases_pre = [re.search(r'(\d+)', r).group() for r in gt_names]
     gt_names = [
-        gt for c, gt in zip(cases, gt_names)
+        gt for c, gt in zip(cases_pre, gt_names)
         if find_file('Z{:}.jpg'.format(c), d_path)
     ]
-    cases = [c for c in cases if find_file('Z{:}.jpg'.format(c), d_path)]
+    cases = [c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)]
+    print(cases_pre, cases)
 
     print(
             '%s[%s]%s Loading all mosaics and DEMs%s' %

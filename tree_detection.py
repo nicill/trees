@@ -85,7 +85,7 @@ Networks
 """
 
 
-def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=0):
+def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
     # Init
     options = parse_inputs()
     d_path = options['val_dir']
@@ -271,55 +271,44 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=0):
         upunci = imresize(unci[0], test_x.shape[1:])
 
         cv2.imwrite(
-            os.path.join(d_path, 'pred.ds{:}_trees{:}.jpg'.format(ratio, case)),
+            os.path.join(d_path, 'pred.ds{:}.{:}_trees{:}.jpg'.format(
+                ratio, dem_name, case
+            )),
             (yi[0] * 255).astype(np.uint8)
         )
         cv2.imwrite(
-            os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case)),
+            os.path.join(d_path, 'pred.d{:}.{:}_trees{:}.jpg'.format(
+                ratio, dem_name, case
+            )),
             (upyi * 255).astype(np.uint8)
         )
         cv2.imwrite(
-            os.path.join(d_path, 'unc.ds{:}_trees{:}.jpg'.format(ratio, case)),
+            os.path.join(d_path, 'unc.ds{:}.{:}_trees{:}.jpg'.format(
+                ratio,  dem_name, case
+            )),
             (unci[0] * 255).astype(np.uint8)
         )
         cv2.imwrite(
-            os.path.join(d_path, 'unc.d{:}_trees{:}.jpg'.format(ratio, case)),
+            os.path.join(d_path, 'unc.d{:}.{:}_trees{:}.jpg'.format(
+                ratio,  dem_name, case
+            )),
             (upunci * 255).astype(np.uint8)
         )
 
 
-def train_test_net(net_name, dem_name='nDEM', ratio=10, verbose=1):
-    """
-
-    :param net_name:
-    :return:
-    """
+def eval(cases, gt_names, dem_name, ratio=10):
     # Init
     options = parse_inputs()
-
-    # Data loading (or preparation)
     d_path = options['val_dir']
-    gt_names = sorted(
-        filter(
-            lambda xi: not os.path.isdir(xi)
-                       and re.search(options['lab_tag'], xi),
-            os.listdir(d_path)
-        ),
-        key=find_number
-    )
-    cases_pre = [str(find_number(r)) for r in gt_names]
-    gt_names = [
-        gt for c, gt in zip(cases_pre, gt_names)
-        if find_file('Z{:}.jpg'.format(c), d_path)
-    ]
-    cases = [c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)]
-
-    train(cases, gt_names, net_name, ratio, verbose)
 
     for i, case in enumerate(cases):
         upyi = np.mean(
             cv2.imread(
-                os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case))
+                os.path.join(
+                    d_path, 'pred.d{:}.{:}_trees{:}.jpg'.format(
+                        ratio,  dem_name, case
+                    )
+                )
             ), axis=-1
         ) / 255
         unet_bool = upyi > 0.5
@@ -380,15 +369,64 @@ def train_test_net(net_name, dem_name='nDEM', ratio=10, verbose=1):
             )
             cv2.imwrite(
                 os.path.join(
-                    d_path, 'pred.fd{:}_trees{:}.jpg'.format(ratio, case)
+                    d_path, 'pred.fd{:}.{:}_trees{:}.jpg'.format(
+                        ratio, dem_name, case
+                    )
                 ),
                 (upyi * 255).astype(np.uint8)
             )
 
 
+def train_test_net(net_name, dem_name='nDEM', ratio=10, verbose=1):
+    """
+
+    :param net_name:
+    :return:
+    """
+    # Init
+    options = parse_inputs()
+
+    # Data loading (or preparation)
+    d_path = options['val_dir']
+    gt_names = sorted(
+        filter(
+            lambda xi: not os.path.isdir(xi)
+                       and re.search(options['lab_tag'], xi),
+            os.listdir(d_path)
+        ),
+        key=find_number
+    )
+    cases_pre = [str(find_number(r)) for r in gt_names]
+    gt_names = [
+        gt for c, gt in zip(cases_pre, gt_names)
+        if find_file('Z{:}.jpg'.format(c), d_path)
+    ]
+    cases = [c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)]
+
+    train(cases, gt_names, net_name, dem_name, ratio, verbose)
+
+
 def main():
     # Init
+    options = parse_inputs()
     c = color_codes()
+
+    # Data loading (or preparation)
+    d_path = options['val_dir']
+    gt_names = sorted(
+        filter(
+            lambda xi: not os.path.isdir(xi)
+                       and re.search(options['lab_tag'], xi),
+            os.listdir(d_path)
+        ),
+        key=find_number
+    )
+    cases_pre = [str(find_number(r)) for r in gt_names]
+    gt_names = [
+        gt for c, gt in zip(cases_pre, gt_names)
+        if find_file('Z{:}.jpg'.format(c), d_path)
+    ]
+    cases = [c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)]
 
     print(
         '%s[%s] %s<Tree detection pipeline>%s' % (
@@ -398,10 +436,12 @@ def main():
 
     ''' <Detection task> '''
     net_name = 'tree-detection.nDEM.unet'
-    train_test_net(net_name, dem_name='nDEM')
-
+    train(cases, gt_names, net_name, 'nDEM')
     net_name = 'tree-detection.DEM.unet'
-    train_test_net(net_name, dem_name='DEM')
+    train(cases, gt_names, net_name, 'DEM')
+
+    eval(cases, gt_names, 'nDEM')
+    eval(cases, gt_names, 'DEM')
 
 
 if __name__ == '__main__':

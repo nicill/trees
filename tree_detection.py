@@ -93,8 +93,21 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
     n_folds = len(gt_names)
 
     print(
-            '%s[%s]%s Loading all mosaics and DEMs%s' %
-            (c['c'], time.strftime("%H:%M:%S"), c['g'], c['nc'])
+            '{:}[{:}]{:} Loading all mosaics and DEMs{:}'.format(
+                c['c'], time.strftime("%H:%M:%S"), c['g'], c['nc']
+            )
+    )
+    for c_i in cases:
+        dem_file = os.path.join(d_path, 'Z{:}.jpg'.format(c_i + dem_name))
+        dem = cv2.imread(dem_file)
+        mosaic_file = os.path.join(d_path, 'Z{:}.jpg'.format(c_i))
+        mosaic = cv2.imread(mosaic_file)
+        print(dem_file, dem.shape, mosaic_file, mosaic.shape)
+
+    print(
+        '{:}[{:}]{:} Ground truth'.format(
+                c['c'], time.strftime("%H:%M:%S"), c['nc']
+            )
     )
     y = [
         (
@@ -105,20 +118,31 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
         ).astype(np.uint8)
         for im in gt_names
     ]
-    for c_i in cases:
-        dem_file = os.path.join(d_path, 'Z{:}.jpg'.format(c_i + dem_name))
-        dem = cv2.imread(dem_file)
-        mosaic_file = os.path.join(d_path, 'Z{:}.jpg'.format(c_i))
-        mosaic = cv2.imread(mosaic_file)
-        print(dem_file, dem.shape, mosaic_file, mosaic.shape)
+
+    print(
+        '{:}[{:}]{:} DEM'.format(
+                c['c'], time.strftime("%H:%M:%S"), c['nc']
+            )
+    )
     dems = [
         cv2.imread(os.path.join(d_path, 'Z{:}.jpg'.format(c_i + dem_name)))
         for c_i in cases
     ]
+    print(
+        '{:}[{:}]{:} Mosaics'.format(
+                c['c'], time.strftime("%H:%M:%S"), c['nc']
+            )
+    )
     mosaics = [
         cv2.imread(os.path.join(d_path, 'Z{:}.jpg'.format(c_i)))
         for c_i in cases
     ]
+
+    print(
+        '{:}[{:}]{:} Normalising data'.format(
+                c['c'], time.strftime("%H:%M:%S"), c['nc']
+            )
+    )
     x = [
         np.moveaxis(
             np.concatenate([mosaic, np.expand_dims(dem[..., 0], -1)], -1),

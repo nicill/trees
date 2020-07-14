@@ -91,6 +91,10 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
     d_path = options['val_dir']
     c = color_codes()
     n_folds = len(gt_names)
+    cases = [
+        c_i for c_i in cases
+        if find_file('Z{:}.jpg'.format(c_i + dem_name), d_path)
+    ]
 
     print(
             '{:}[{:}]{:} Loading all mosaics and DEMs{:}'.format(

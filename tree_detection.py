@@ -85,6 +85,209 @@ Networks
 """
 
 
+def train(cases, gt_names, net_name, ratio=10, verbose=0):
+    # Init
+    options = parse_inputs()
+    d_path = options['val_dir']
+    c = color_codes()
+    n_folds = len(gt_names)
+
+    print(
+            '%s[%s]%s Loading all mosaics and DEMs%s' %
+            (c['c'], time.strftime("%H:%M:%S"), c['g'], c['nc'])
+    )
+    y = [
+        (
+                np.mean(
+                    cv2.imread(os.path.join(d_path, im)),
+                    axis=-1
+                ) < 10
+        ).astype(np.uint8)
+        for im in gt_names
+    ]
+    dems = [
+        cv2.imread(os.path.join(d_path, 'Z{:}nDEM.jpg'.format(c_i)))
+        for c_i in cases
+    ]
+    mosaics = [
+        cv2.imread(os.path.join(d_path, 'Z{:}.jpg'.format(c_i)))
+        for c_i in cases
+    ]
+    x = [
+        np.moveaxis(
+            np.concatenate([mosaic, np.expand_dims(dem[..., 0], -1)], -1),
+            -1, 0
+        )
+        for mosaic, dem in zip(mosaics, dems)
+    ]
+
+    mean_x = [np.mean(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
+    std_x = [np.std(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
+
+    norm_x = [
+        (xi - meani.reshape((-1, 1, 1))) / stdi.reshape((-1, 1, 1))
+        for xi, meani, stdi in zip(x, mean_x, std_x)
+    ]
+
+    print(
+        '%s[%s] %sStarting cross-validation (leave-one-mosaic-out)'
+        ' - %d mosaics%s' % (
+            c['c'], time.strftime("%H:%M:%S"), c['g'], n_folds, c['nc']
+        )
+    )
+    for i, case in enumerate(cases):
+        if verbose > 0:
+            print(
+                '%s[%s]%s Starting training for mosaic %s %s(%d/%d)%s' %
+                (
+                    c['c'], time.strftime("%H:%M:%S"),
+                    c['g'], case,
+                    c['c'], i + 1, len(cases), c['nc']
+                )
+            )
+        test_x = norm_x[i]
+
+        train_y = y[:i] + y[i + 1:]
+        train_x = norm_x[:i] + norm_x[i + 1:]
+
+        val_split = 0.1
+        batch_size = 32
+        # patch_size = (256, 256)
+        patch_size = (64, 64)
+        # overlap = (64, 64)
+        overlap = (32, 32)
+        num_workers = 1
+
+        model_name = '{:}.d{:}.unc.mosaic{:}.mdl'.format(
+            net_name, ratio, case
+        )
+        net = Unet2D(n_inputs=len(norm_x[0]))
+
+        training_start = time.time()
+        try:
+            net.load_model(os.path.join(d_path, model_name))
+        except IOError:
+
+            # Dataloader creation
+            if verbose > 0:
+                n_params = sum(
+                    p.numel() for p in net.parameters() if p.requires_grad
+                )
+                print(
+                    '%sStarting training with a Unet 2D%s (%d parameters)' %
+                    (c['c'], c['nc'], n_params)
+                )
+
+            if val_split > 0:
+                n_samples = len(train_x)
+
+                n_t_samples = int(n_samples * (1 - val_split))
+
+                d_train = train_x[:n_t_samples]
+                d_val = train_x[n_t_samples:]
+
+                l_train = train_y[:n_t_samples]
+                l_val = train_y[n_t_samples:]
+
+                print('Training dataset (with validation)')
+                # train_dataset = Cropping2DDataset(
+                #     d_train, l_train, patch_size=patch_size, overlap=overlap,
+                #     filtered=True
+                # )
+                train_dataset = CroppingDown2DDataset(
+                    d_train, l_train, patch_size=patch_size, overlap=overlap,
+                    filtered=True
+                )
+
+                print('Validation dataset (with validation)')
+                # val_dataset = Cropping2DDataset(
+                #     d_val, l_val, patch_size=patch_size, overlap=overlap,
+                #     filtered=True
+                # )
+                val_dataset = CroppingDown2DDataset(
+                    d_val, l_val, patch_size=patch_size, overlap=overlap,
+                    filtered=True
+                )
+            else:
+                print('Training dataset')
+                train_dataset = Cropping2DDataset(
+                    train_x, train_y, patch_size=patch_size, overlap=overlap,
+                    filtered=True
+                )
+
+                print('Validation dataset')
+                val_dataset = Cropping2DDataset(
+                    train_x, train_y, patch_size=patch_size, overlap=overlap
+                )
+
+            train_dataloader = DataLoader(
+                train_dataset, batch_size, True, num_workers=num_workers
+            )
+            val_dataloader = DataLoader(
+                val_dataset, batch_size, num_workers=num_workers
+            )
+
+            epochs = parse_inputs()['epochs']
+            patience = parse_inputs()['patience']
+
+            net.fit(
+                train_dataloader,
+                val_dataloader,
+                epochs=epochs,
+                patience=patience,
+            )
+
+            net.save_model(os.path.join(d_path, model_name))
+
+        if verbose > 0:
+            time_str = time.strftime(
+                '%H hours %M minutes %S seconds',
+                time.gmtime(time.time() - training_start)
+            )
+            print(
+                '%sTraining finished%s (total time %s)\n' %
+                (c['r'], c['nc'], time_str)
+            )
+
+            print(
+                '%s[%s]%s Starting testing with mosaic %s %s(%d/%d)%s' %
+                (
+                    c['c'], time.strftime("%H:%M:%S"),
+                    c['g'], case,
+                    c['c'], i + 1, len(cases), c['nc']
+                )
+            )
+
+        downtest_x = imresize(
+            test_x,
+            (test_x.shape[0],) + tuple(
+                [length // ratio for length in test_x.shape[1:]]
+            )
+        )
+        yi, unci = net.test([downtest_x], patch_size=None)
+
+        upyi = imresize(yi[0], test_x.shape[1:])
+
+        upunci = imresize(unci[0], test_x.shape[1:])
+
+        cv2.imwrite(
+            os.path.join(d_path, 'pred.ds{:}_trees{:}.jpg'.format(ratio, case)),
+            (yi[0] * 255).astype(np.uint8)
+        )
+        cv2.imwrite(
+            os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case)),
+            (upyi * 255).astype(np.uint8)
+        )
+        cv2.imwrite(
+            os.path.join(d_path, 'unc.ds{:}_trees{:}.jpg'.format(ratio, case)),
+            (unci[0] * 255).astype(np.uint8)
+        )
+        cv2.imwrite(
+            os.path.join(d_path, 'unc.d{:}_trees{:}.jpg'.format(ratio, case)),
+            (upunci * 255).astype(np.uint8)
+        )
+
+
 def train_test_net(net_name, ratio=10, verbose=1):
     """
 
@@ -92,7 +295,6 @@ def train_test_net(net_name, ratio=10, verbose=1):
     :return:
     """
     # Init
-    c = color_codes()
     options = parse_inputs()
 
     # Data loading (or preparation)
@@ -105,7 +307,6 @@ def train_test_net(net_name, ratio=10, verbose=1):
         ),
         key=find_number
     )
-    n_folds = len(gt_names)
     cases_pre = [find_number(r) for r in gt_names]
     gt_names = [
         gt for c, gt in zip(cases_pre, gt_names)
@@ -113,202 +314,7 @@ def train_test_net(net_name, ratio=10, verbose=1):
     ]
     cases = [c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)]
 
-    # print(
-    #         '%s[%s]%s Loading all mosaics and DEMs%s' %
-    #         (c['c'], time.strftime("%H:%M:%S"), c['g'], c['nc'])
-    # )
-    # y = [
-    #     (
-    #             np.mean(
-    #                 cv2.imread(os.path.join(d_path, im)),
-    #                 axis=-1
-    #             ) < 10
-    #     ).astype(np.uint8)
-    #     for im in gt_names
-    # ]
-    # dems = [
-    #     cv2.imread(os.path.join(d_path, 'Z{:}nDEM.jpg'.format(c_i)))
-    #     for c_i in cases
-    # ]
-    # mosaics = [
-    #     cv2.imread(os.path.join(d_path, 'Z{:}.jpg'.format(c_i)))
-    #     for c_i in cases
-    # ]
-    # x = [
-    #     np.moveaxis(
-    #         np.concatenate([mosaic, np.expand_dims(dem[..., 0], -1)], -1),
-    #         -1, 0
-    #     )
-    #     for mosaic, dem in zip(mosaics, dems)
-    # ]
-    #
-    # mean_x = [np.mean(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
-    # std_x = [np.std(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
-    #
-    # norm_x = [
-    #     (xi - meani.reshape((-1, 1, 1))) / stdi.reshape((-1, 1, 1))
-    #     for xi, meani, stdi in zip(x, mean_x, std_x)
-    # ]
-    #
-    # print(
-    #     '%s[%s] %sStarting cross-validation (leave-one-mosaic-out)'
-    #     ' - %d mosaics%s' % (
-    #         c['c'], time.strftime("%H:%M:%S"), c['g'], n_folds, c['nc']
-    #     )
-    # )
-    # for i, case in enumerate(cases):
-    #     if verbose > 0:
-    #         print(
-    #             '%s[%s]%s Starting training for mosaic %s %s(%d/%d)%s' %
-    #             (
-    #                 c['c'], time.strftime("%H:%M:%S"),
-    #                 c['g'], case,
-    #                 c['c'], i + 1, len(cases), c['nc']
-    #             )
-    #         )
-    #
-    #     test_y = y[i]
-    #     test_x = norm_x[i]
-    #
-    #     train_y = y[:i] + y[i + 1:]
-    #     train_x = norm_x[:i] + norm_x[i + 1:]
-    #
-    #     val_split = 0.1
-    #     batch_size = 32
-    #     # patch_size = (256, 256)
-    #     patch_size = (64, 64)
-    #     # overlap = (64, 64)
-    #     overlap = (32, 32)
-    #     num_workers = 1
-    #
-    #     model_name = '{:}.d{:}.unc.mosaic{:}.mdl'.format(
-    #         net_name, ratio, case
-    #     )
-    #     net = Unet2D(n_inputs=len(norm_x[0]))
-    #
-    #     training_start = time.time()
-    #     try:
-    #         net.load_model(os.path.join(d_path, model_name))
-    #     except IOError:
-    #
-    #         # Dataloader creation
-    #         if verbose > 0:
-    #             n_params = sum(
-    #                 p.numel() for p in net.parameters() if p.requires_grad
-    #             )
-    #             print(
-    #                 '%sStarting training with a Unet 2D%s (%d parameters)' %
-    #                 (c['c'], c['nc'], n_params)
-    #             )
-    #
-    #         if val_split > 0:
-    #             n_samples = len(train_x)
-    #
-    #             n_t_samples = int(n_samples * (1 - val_split))
-    #
-    #             d_train = train_x[:n_t_samples]
-    #             d_val = train_x[n_t_samples:]
-    #
-    #             l_train = train_y[:n_t_samples]
-    #             l_val = train_y[n_t_samples:]
-    #
-    #             print('Training dataset (with validation)')
-    #             # train_dataset = Cropping2DDataset(
-    #             #     d_train, l_train, patch_size=patch_size, overlap=overlap,
-    #             #     filtered=True
-    #             # )
-    #             train_dataset = CroppingDown2DDataset(
-    #                 d_train, l_train, patch_size=patch_size, overlap=overlap,
-    #                 filtered=True
-    #             )
-    #
-    #             print('Validation dataset (with validation)')
-    #             # val_dataset = Cropping2DDataset(
-    #             #     d_val, l_val, patch_size=patch_size, overlap=overlap,
-    #             #     filtered=True
-    #             # )
-    #             val_dataset = CroppingDown2DDataset(
-    #                 d_val, l_val, patch_size=patch_size, overlap=overlap,
-    #                 filtered=True
-    #             )
-    #         else:
-    #             print('Training dataset')
-    #             train_dataset = Cropping2DDataset(
-    #                 train_x, train_y, patch_size=patch_size, overlap=overlap,
-    #                 filtered=True
-    #             )
-    #
-    #             print('Validation dataset')
-    #             val_dataset = Cropping2DDataset(
-    #                 train_x, train_y, patch_size=patch_size, overlap=overlap
-    #             )
-    #
-    #         train_dataloader = DataLoader(
-    #             train_dataset, batch_size, True, num_workers=num_workers
-    #         )
-    #         val_dataloader = DataLoader(
-    #             val_dataset, batch_size, num_workers=num_workers
-    #         )
-    #
-    #         epochs = parse_inputs()['epochs']
-    #         patience = parse_inputs()['patience']
-    #
-    #         net.fit(
-    #             train_dataloader,
-    #             val_dataloader,
-    #             epochs=epochs,
-    #             patience=patience,
-    #         )
-    #
-    #         net.save_model(os.path.join(d_path, model_name))
-    #
-    #     if verbose > 0:
-    #         time_str = time.strftime(
-    #             '%H hours %M minutes %S seconds',
-    #             time.gmtime(time.time() - training_start)
-    #         )
-    #         print(
-    #             '%sTraining finished%s (total time %s)\n' %
-    #             (c['r'], c['nc'], time_str)
-    #         )
-    #
-    #         print(
-    #             '%s[%s]%s Starting testing with mosaic %s %s(%d/%d)%s' %
-    #             (
-    #                 c['c'], time.strftime("%H:%M:%S"),
-    #                 c['g'], case,
-    #                 c['c'], i + 1, len(cases), c['nc']
-    #             )
-    #         )
-    #
-    #     downtest_x = imresize(
-    #         test_x,
-    #         (test_x.shape[0],) + tuple(
-    #             [length // ratio for length in test_x.shape[1:]]
-    #         )
-    #     )
-    #     yi, unci = net.test([downtest_x], patch_size=None)
-    #
-    #     upyi = imresize(yi[0], test_x.shape[1:])
-    #
-    #     upunci = imresize(unci[0], test_x.shape[1:])
-    #
-    #     cv2.imwrite(
-    #         os.path.join(d_path, 'pred.ds{:}_trees{:}.jpg'.format(ratio, case)),
-    #         (yi[0] * 255).astype(np.uint8)
-    #     )
-    #     cv2.imwrite(
-    #         os.path.join(d_path, 'pred.d{:}_trees{:}.jpg'.format(ratio, case)),
-    #         (upyi * 255).astype(np.uint8)
-    #     )
-    #     cv2.imwrite(
-    #         os.path.join(d_path, 'unc.ds{:}_trees{:}.jpg'.format(ratio, case)),
-    #         (unci[0] * 255).astype(np.uint8)
-    #     )
-    #     cv2.imwrite(
-    #         os.path.join(d_path, 'unc.d{:}_trees{:}.jpg'.format(ratio, case)),
-    #         (upunci * 255).astype(np.uint8)
-    #     )
+    # train(cases, gt_names, net_name, ratio, verbose)
 
     for i, case in enumerate(cases):
         upyi = cv2.imread(

@@ -118,7 +118,7 @@ def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
                 np.mean(
                     cv2.imread(os.path.join(d_path, im)),
                     axis=-1
-                ) < 10
+                ) < 50
         ).astype(np.uint8)
         for im in gt_names
     ]

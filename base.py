@@ -5,7 +5,7 @@ from copy import deepcopy
 import torch
 from torch import nn
 import torch.nn.functional as F
-from layers import AttentionGate3D, DownsampledMultiheadAttention3D
+from layers import AttentionGate2D, DownsampledMultiheadAttention2D
 from utils import time_to_string
 
 

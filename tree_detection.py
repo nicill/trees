@@ -6,7 +6,7 @@ import time
 import numpy as np
 from skimage.transform import resize as imresize
 from torch.utils.data import DataLoader
-from data_manipulation.utils import color_codes, find_file
+from utils import color_codes, find_file
 from datasets import Cropping2DDataset, CroppingDown2DDataset
 from models import Unet2D
 from metrics import hausdorf_distance, avg_euclidean_distance

@@ -5,71 +5,9 @@ import torch
 from functools import partial
 from torch import nn
 import torch.nn.functional as F
-from data_manipulation.models import BaseModel
-from data_manipulation.utils import to_torch_var, time_to_string
-from data_manipulation.criterions import flip_loss, focal_loss
-
-
-def dsc_loss(pred, target, smooth=0.1):
-    """
-    Loss function based on a single class DSC metric.
-    :param pred: Predicted values. This tensor should have the shape:
-     [batch_size, data_shape]
-    :param target: Ground truth values. This tensor can have multiple shapes:
-     - [batch_size, n_classes, data_shape]: This is the expected output since
-       it matches with the predicted tensor.
-     - [batch_size, data_shape]: In this case, the tensor is labeled with
-       values ranging from 0 to n_classes. We need to convert it to
-       categorical.
-    :param smooth: Parameter used to smooth the DSC when there are no positive
-     samples.
-    :return: The mean DSC for the batch
-    """
-    dims = pred.shape
-    assert target.shape == pred.shape,\
-        'Sizes between predicted and target do not match'
-    target = target.type_as(pred)
-
-    reduce_dims = tuple(range(1, len(dims)))
-    num = (2 * torch.sum(pred * target, dim=reduce_dims))
-    den = torch.sum(pred + target, dim=reduce_dims) + smooth
-    dsc_k = num / den
-    dsc = 1 - torch.mean(dsc_k)
-
-    return torch.clamp(dsc, 0., 1.)
-
-
-def positive_uncertainty_loss(
-        pred, target, q, q_factor=0.5, base=F.binary_cross_entropy
-):
-    """
-    Flip loss function for the positive labels based on:
-    Richard McKinley, Michael Rebsamen, Raphael Meier, Mauricio Reyes,
-    Christian Rummel and Roland Wiest. "Few-shot brain segmentation from weakly
-    labeled data with deep heteroscedastic multi-task network".
-    https://arxiv.org/abs/1904.02436
-    The idea is to allow for mislabeling inside the labeled are (since the area
-    of the annotation is arbitrary, but the location of it is right). Otherwise
-    the background label is correct.
-    :param pred: Predicted values. The shape of the tensor should be related
-     to the base function.
-    :param target: Ground truth values. The shape of the tensor should be
-     related to the base function.
-    :param q: Uncertainty output from the network. The shape of the tensor
-     should be related to the base function.
-    :param q_factor: Factor to normalise the value of q.
-    :param base: Base function for the flip loss.
-    :return: The flip loss given a base loss function
-    """
-    norm_q = q * q_factor
-    z = (pred < 0.5).type_as(pred) * target
-    q_target = (1 - target) * norm_q + target * (1 - norm_q)
-    loss_seg = base(pred, q_target.type_as(pred).detach())
-    loss_uncertainty = base(norm_q, z.detach())
-
-    final_loss = loss_seg + loss_uncertainty
-
-    return final_loss
+from base import BaseModel
+from utils import to_torch_var, time_to_string
+from criteria import flip_loss, focal_loss, dsc_loss
 
 
 class Autoencoder2D(BaseModel):

@@ -3,7 +3,19 @@ from skimage.transform import resize as imresize
 import numpy as np
 import torch
 from torch.utils.data.dataset import Dataset
-from data_manipulation.datasets import centers_to_slice
+
+
+def centers_to_slice(voxels, patch_half):
+    slices = [
+        tuple(
+            [
+                slice(idx - p_len, idx + p_len) for idx, p_len in zip(
+                    voxel, patch_half
+                )
+            ]
+        ) for voxel in voxels
+    ]
+    return slices
 
 
 def get_slices(masks, patch_size, overlap):
@@ -52,6 +64,7 @@ def get_slices(masks, patch_size, overlap):
     ]
 
     return patch_slices
+
 
 class Cropping2DDataset(Dataset):
     def __init__(

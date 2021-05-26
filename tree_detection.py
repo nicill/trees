@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import re
 import cv2
 import time
@@ -12,6 +13,32 @@ from models import Unet2D
 from metrics import hausdorf_distance, avg_euclidean_distance
 from metrics import matched_percentage
 from utils import list_from_mask
+
+def checkGT(folder,siteName,sList):
+    fileList=os.listdir(folder)
+    #print(fileList)
+
+    #go over each folder, if a GT file does not exist, create it
+    if not(siteName+"GT.jpg" in fileList):
+        print("no GT! "+siteName+"GT.jpg")
+        #read ROI
+        roiFile=folder+"/"+siteName+"ROI.jpg"
+        roi=cv2.imread(roiFile,cv2.IMREAD_GRAYSCALE)
+        if roi is None:raise Exception("NO ROI found in site "+roiFile+"")
+        mask=roi.copy()
+        mask[roi>0]=0 #now the mask is completely black
+        #now go over the list of sites and add the code of the classes present
+        for i in range(len(sList)):
+            currentMaskFile=folder+"/"+siteName+sList[i]+".jpg"
+            currentMask=cv2.imread(currentMaskFile,cv2.IMREAD_GRAYSCALE)
+            if currentMask is None: print("species "+sList[i]+" not present in site "+siteName)
+            else: mask[currentMask==0]=i #masks are black on white background
+            #cv2.imwrite(folder+"/"+siteName+"GT.jpg",mask)
+
+
+        # in the end, put everything outside thr ROI to background
+        mask[roi>100]=0
+        cv2.imwrite(folder+"/"+siteName+"GT.jpg",mask)
 
 
 def parse_inputs():
@@ -444,38 +471,39 @@ def train_test_net(net_name, dem_name='nDEM', ratio=10, verbose=1):
     ]
     cases = [c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)]
 
+
+
     train(cases, gt_names, net_name, dem_name, ratio, verbose)
 
 
 def main():
+    #S00 is the background class
+    maxSpeciesCode=46
+    speciesList=["S"+'{:02d}'.format(i) for i in range(0,maxSpeciesCode+1)]
+
+    #print(speciesList)
+
     # Init
     options = parse_inputs()
     c = color_codes()
 
     # Data loading (or preparation)
     d_path = options['val_dir']
-    gt_names = sorted(
-        filter(
-            lambda xi: not os.path.isdir(xi)
-                       and re.search(options['lab_tag'], xi),
-            os.listdir(d_path)
-        ),
-        key=find_number
-    )
-    cases_pre = [str(find_number(r)) for r in gt_names]
-    gt_names = [
-        gt for c, gt in zip(cases_pre, gt_names)
-        if find_file('Z{:}.jpg'.format(c), d_path)
-    ]
-    cases = [
-        c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)
-    ]
+    siteFolders=sorted(os.listdir(d_path))
 
-    print(
-        '%s[%s] %s<Tree detection pipeline>%s' % (
-            c['c'], time.strftime("%H:%M:%S"), c['y'], c['nc']
-        )
-    )
+    #First, create ground truth files if they do not exist
+    for x in siteFolders:checkGT(d_path+x,x,speciesList)
+
+
+    gt_names = [d_path+"/"+x+"GT.jpg" for x in siteFolders ]
+    print(gt_names)
+
+    cases = [ d_path+x+"/"+x+".jpg" for x in siteFolders ]
+    print("\n\n"+str(cases))
+
+    rois = [ d_path+x+"/"+x+"ROI.jpg" for x in siteFolders ]
+    print("\n\n")
+    print(rois)
 
     ''' <Detection task> '''
     net_name = 'tree-detection.nDEM.unet'

@@ -324,3 +324,32 @@ def normalised_xcor_loss(var_x, var_y):
         :return: A tensor with the loss
     """
     return 1. - normalised_xcor(var_x, var_y)
+
+
+"""
+> Multi-class losses
+"""
+
+def cross_entropy(pred, target):
+    """
+    Loss function based on a cathegorical cross entropy metric.
+    :param pred: Predicted values. This tensor should have the shape:
+     [batch_size, n_classes, data_shape]
+    :param target: Ground truth values. This tensor can have multiple shapes:
+     - [batch_size, n_classes, data_shape]: This is the expected output since
+       it matches with the predicted tensor.
+     - [batch_size, data_shape]: In this case, the tensor is labeled with
+       values ranging from 0 to n_classes. We need to convert it to
+       categorical.
+    :return: The mean cross entropy for the batch
+    """
+    dims = pred.shape
+    n_classes = dims[1]
+    if target.shape != pred.shape:
+        assert torch.max(target) <= n_classes, 'Wrong number of classes for GT'
+        target = torch.cat([target == i for i in range(n_classes)], dim=1)
+        target = target.type_as(pred)
+
+    xent = F.binary_cross_entropy(pred, target)
+
+    return xent

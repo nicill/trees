@@ -22,7 +22,6 @@ class Autoencoder2D(BaseModel):
     ):
         super().__init__()
         # Init
-        self.pooling = pooling
         self.device = device
         # Down path
         self.down = nn.ModuleList([

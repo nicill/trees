@@ -7,7 +7,7 @@ from torch import nn
 import torch.nn.functional as F
 from base import BaseModel
 from utils import to_torch_var, time_to_string
-from criteria import flip_loss, focal_loss, dsc_loss
+from criteria import cross_entropy
 
 
 class Autoencoder2D(BaseModel):
@@ -18,15 +18,12 @@ class Autoencoder2D(BaseModel):
                 "cuda:0" if torch.cuda.is_available() else "cpu"
             ),
             n_inputs=1,
-            kernel_size=3,
-            pooling=False,
-            dropout=0,
+            kernel_size=3
     ):
         super().__init__()
         # Init
         self.pooling = pooling
         self.device = device
-        self.dropout = dropout
         # Down path
         self.down = nn.ModuleList([
             nn.Sequential(
@@ -56,7 +53,7 @@ class Autoencoder2D(BaseModel):
         deconv_in = map(sum, zip(down_out, up_out))
         self.up = nn.ModuleList([
             nn.Sequential(
-                nn.ConvTranspose2d(
+                nn.Conv2d(
                     f_in, f_out, kernel_size,
                     padding=kernel_size // 2
                 ),
@@ -71,35 +68,20 @@ class Autoencoder2D(BaseModel):
         down_inputs = []
         for c in self.down:
             c.to(self.device)
-            input_s = F.dropout2d(
-                c(input_s), self.dropout, self.training
-            )
+            input_s = c(input_s)
             down_inputs.append(input_s)
-            if self.pooling:
-                input_s = F.max_pool2d(input_s, 2)
+            input_s = F.max_pool2d(input_s, 2)
 
         self.u.to(self.device)
-        input_s = F.dropout2d(self.u(input_s), self.dropout, self.training)
+        input_s = self.u(input_s)
 
         for d, i in zip(self.up, down_inputs[::-1]):
             d.to(self.device)
-            if self.pooling:
-                input_s = F.dropout2d(
-                    d(
-                        torch.cat(
-                            (F.interpolate(input_s, size=i.size()[2:]), i),
-                            dim=1
-                        )
-                    ),
-                    self.dropout,
-                    self.training
+            input_s = d(
+                torch.cat(
+                    (F.interpolate(input_s, size=i.size()[2:]), i), dim=1
                 )
-            else:
-                input_s = F.dropout2d(
-                    d(torch.cat((input_s, i), dim=1)),
-                    self.dropout,
-                    self.training
-                )
+            )
 
         return input_s
 
@@ -109,7 +91,7 @@ class Unet2D(BaseModel):
             self,
             conv_filters=None,
             device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
-            n_inputs=4, n_outputs=1
+            n_inputs=3, n_outputs=1
     ):
         super(Unet2D, self).__init__()
         # Init values
@@ -124,20 +106,12 @@ class Unet2D(BaseModel):
         # I plan to change that to use the AutoEncoder framework in
         # data_manipulation.
         self.autoencoder = Autoencoder2D(
-            conv_filters, device, n_inputs, pooling=True
+            conv_filters, device, n_inputs
         )
-
-        # Deep supervision branch.
-        # This branch adapts the bottleneck filters to work with the final
-        # segmentation block.
-        self.deep_seg = nn.Sequential(
-            nn.Conv2d(conv_filters[-1], conv_filters[0], 1),
-            nn.ReLU(),
-            nn.BatchNorm2d(conv_filters[0]),
-        )
-        self.deep_seg.to(device)
 
         # Final segmentation block.
+        if n_ouputs == 1:
+            n_outputs = 2
         self.seg = nn.Sequential(
             nn.Conv2d(conv_filters[0], conv_filters[0], 1),
             nn.ReLU(),
@@ -146,74 +120,14 @@ class Unet2D(BaseModel):
         )
         self.seg.to(device)
 
-        # Final uncertainty block.
-        # For now, this block is only used on the main branch. I am not sure
-        # on how useful it might be for the deep branch.
-        self.unc = nn.Sequential(
-            nn.Conv2d(conv_filters[0], conv_filters[0], 1),
-            nn.ReLU(),
-            nn.BatchNorm2d(conv_filters[0]),
-            nn.Conv2d(conv_filters[0], n_outputs, 1)
-        )
-        self.unc.to(device)
-
         # <Loss function setup>
         self.train_functions = [
             # Focal loss for the main branch.
             {
                 'name': 'xentr',
                 'weight': 1,
-                'f': lambda p, t: focal_loss(
-                    torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
-                    alpha=0.5
-                )
-            },
-            # Focal loss for the deep supervision branch (bottleneck).
-            {
-                'name': 'dp xe',
-                'weight': 1,
-                'f': lambda p, t: focal_loss(
-                    torch.squeeze(p[2], dim=1),
-                    torch.squeeze(
-                        F.max_pool2d(
-                            t.type_as(p[2]),
-                            2 ** len(self.autoencoder.down)),
-                        dim=1
-                    ).to(p[2].device),
-                    alpha=0.5
-                )
-            },
-            # DSC loss for the main branch.
-            {
-                'name': 'dsc',
-                'weight': 1,
-                'f': lambda p, t: dsc_loss(p[0], t)
-            },
-            # DSC loss for the deep supervision branch (bottleneck).
-            {
-                'name': 'dp dsc',
-                'weight': 1,
-                'f': lambda p, t: dsc_loss(
-                    p[2],
-                    F.max_pool2d(
-                        t.type_as(p[2]),
-                        2 ** len(self.autoencoder.down)
-                    ).to(p[2].device)
-                )
-            },
-            # Uncertainty loss based on the flip loss (by Mckinley et al).
-            {
-                'name': 'unc',
-                'weight': 1,
-                'f': lambda p, t: flip_loss(
-                    torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
-                    torch.squeeze(p[1], dim=1),
-                    q_factor=1,
-                    base=partial(focal_loss, alpha=0.5)
-                )
-            },
+                'f': lambda p, t: cross_entropy(p, t)
+            }
         ]
         self.val_functions = [
             # Focal loss for validation.
@@ -221,46 +135,8 @@ class Unet2D(BaseModel):
             {
                 'name': 'xentr',
                 'weight': 0,
-                'f': lambda p, t: focal_loss(
-                    torch.squeeze(p[0], dim=1),
-                    torch.squeeze(t, dim=1).type_as(p[0]).to(p[0].device),
-                    alpha=0.5
-                )
-            },
-            # DSC loss for validation.
-            {
-                'name': 'dsc',
-                'weight': 1,
-                'f': lambda p, t: dsc_loss(p[0], t)
-            },
-            # Losses based on uncertainty values.for
-            # Their weight is 0 because I don't want them to affect early
-            # stopping. They are useful values to see how the uncertainty is
-            # evolving, but that's it.
-            {
-                'name': 'μ unc',
-                'weight': 0,
-                'f': lambda p, t: torch.mean(p[1])
-            },
-            {
-                'name': 'unc',
-                'weight': 0,
-                'f': lambda p, t: torch.min(p[1])
+                'f': lambda p, t: cross_entropy(p, t)
             }
-        ]
-        self.acc_functions = [
-            # Max uncertainty.
-            # I use it as an accuracy function, because we want to maximise
-            # them (losses are minimised) and I actually think that the
-            # maximum uncertainty should rise and the mininum fall for it
-            # to be any useful.
-            # Since accuracy metrics are there just for added information
-            # and they should not affect early stopping, they do not have
-            # weights.
-            {
-                'name': 'UNC',
-                'f': lambda p, t: torch.max(p[1])
-            },
         ]
 
         # <Optimizer setup>
@@ -276,34 +152,10 @@ class Unet2D(BaseModel):
     def forward(self, input_ae):
         input_s = self.autoencoder(input_ae)
 
-        # Deep supervision.
-        # We need to complete the down path and the bottleneck again.
-        for c in self.autoencoder.down:
-            input_ae = F.dropout2d(
-                c(input_ae),
-                self.autoencoder.dropout,
-                self.autoencoder.training
-            )
-            input_ae = F.max_pool2d(input_ae, 2)
-        input_ae = F.dropout2d(
-            self.autoencoder.u(input_ae),
-            self.autoencoder.dropout,
-            self.autoencoder.training
-        )
-
-        # This is the last part of deep supervision
-        input_ae = self.deep_seg(input_ae)
-
         # Since we are dealing with a binary problem, there is no need to use
         # softmax.
-        multi_seg = torch.sigmoid(self.seg(input_s))
-        unc = torch.sigmoid(self.unc(input_s))
-        low_seg = torch.sigmoid(self.seg(input_ae))
-        return multi_seg, unc, low_seg
-
-    def dropout_update(self):
-        super().dropout_update()
-        self.autoencoder.dropout = self.dropout
+        seg = torch.softmax(self.seg(input_s), dim=1)
+        return seg
 
     def test(
             self, data, patch_size=256, verbose=True
@@ -311,7 +163,6 @@ class Unet2D(BaseModel):
         # Init
         self.eval()
         seg = list()
-        unc = list()
 
         # Init
         t_in = time.time()
@@ -331,7 +182,6 @@ class Unet2D(BaseModel):
 
                 # Initial results. Filled to 0.
                 seg_i = np.zeros(im.shape[1:])
-                unc_i = np.zeros(im.shape[1:])
 
                 limits = tuple(
                     list(range(0, lim, patch_size))[:-1] + [lim - patch_size]
@@ -356,13 +206,12 @@ class Unet2D(BaseModel):
                     # Testing itself.
                     with torch.no_grad():
                         torch.cuda.synchronize()
-                        seg_pi, unc_pi, _ = self(data_tensor)
+                        seg_pi = self(data_tensor)
                         torch.cuda.synchronize()
                         torch.cuda.empty_cache()
 
                     # Then we just fill the results image.
                     seg_i[xslice, yslice] = np.squeeze(seg_pi.cpu().numpy())
-                    unc_i[xslice, yslice] = np.squeeze(unc_pi.cpu().numpy())
 
                     # Printing
                     init_c = '\033[0m' if self.training else '\033[38;5;238m'
@@ -394,7 +243,7 @@ class Unet2D(BaseModel):
                 # Testing
                 with torch.no_grad():
                     torch.cuda.synchronize(self.device)
-                    seg_pi, unc_pi, _ = self(data_tensor)
+                    seg_pi = self(data_tensor)
                     torch.cuda.synchronize(self.device)
                     torch.cuda.empty_cache()
 
@@ -402,7 +251,6 @@ class Unet2D(BaseModel):
                 # The images have a batch number at the beginning. Since each
                 # batch is just an image, that batch number is useless.
                 seg_i = np.squeeze(seg_pi.cpu().numpy())
-                unc_i = np.squeeze(unc_pi.cpu().numpy())
 
                 # Printing
                 init_c = '\033[0m' if self.training else '\033[38;5;238m'
@@ -430,6 +278,5 @@ class Unet2D(BaseModel):
                 )
 
             seg.append(seg_i)
-            unc.append(unc_i)
 
-        return seg, unc
+        return seg

@@ -112,74 +112,50 @@ Networks
 """
 
 
-def train(cases, gt_names, net_name, dem_name, ratio=10, verbose=1):
+def train(cases, gt_names, net_name, ratio=10, verbose=1):
     # Init
+    print("\n\n\n\n STARTING TRAIN  ")
     options = parse_inputs()
     d_path = options['val_dir']
     c = color_codes()
     n_folds = len(gt_names)
-    cases = [
-        c_i for c_i in cases
-        if find_file('Z{:}.jpg'.format(c_i + dem_name), d_path)
-    ]
+    print("starting cases")
+    print(cases)
+    #cases = [
+    #    c_i for c_i in cases
+    #    if find_file('Z{:}.jpg'.format(c_i + dem_name), d_path)
+    #]
 
-    print(
-            '{:}[{:}]{:} Loading all mosaics and DEMs{:}'.format(
-                c['c'], time.strftime("%H:%M:%S"), c['g'], c['nc']
-            )
-    )
-    for c_i in cases:
-        dem_file = os.path.join(d_path, 'Z{:}.jpg'.format(c_i + dem_name))
-        dem = cv2.imread(dem_file)
-        mosaic_file = os.path.join(d_path, 'Z{:}.jpg'.format(c_i))
-        mosaic = cv2.imread(mosaic_file)
-        print(dem_file, dem.shape, mosaic_file, mosaic.shape)
+    #print(
+    #        '{:}[{:}]{:} Loading all mosaics and DEMs{:}'.format(
+    #            c['c'], time.strftime("%H:%M:%S"), c['g'], c['nc']
+    #        )
+    #)
+    #for c_i in cases:
+    #    mosaic = cv2.imread(c_i)
+    #    print(c_i, mosaic.shape)
 
-    print(
-        '{:}[{:}]{:} Ground truth'.format(
-                c['c'], time.strftime("%H:%M:%S"), c['nc']
-            )
-    )
-    y = [
-        (
-                np.mean(
-                    cv2.imread(os.path.join(d_path, im)),
-                    axis=-1
-                ) < 50
-        ).astype(np.uint8)
-        for im in gt_names
-    ]
 
-    print(
-        '{:}[{:}]{:} DEM'.format(
-                c['c'], time.strftime("%H:%M:%S"), c['nc']
-            )
-    )
-    dems = [
-        cv2.imread(os.path.join(d_path, 'Z{:}.jpg'.format(c_i + dem_name)))
-        for c_i in cases
-    ]
-    print(
-        '{:}[{:}]{:} Mosaics'.format(
-                c['c'], time.strftime("%H:%M:%S"), c['nc']
-            )
-    )
-    mosaics = [
-        cv2.imread(os.path.join(d_path, 'Z{:}.jpg'.format(c_i)))
-        for c_i in cases
-    ]
+    print("reading GT ")
+    print(gt_names)
 
-    print(
-        '{:}[{:}]{:} Normalising data'.format(
-                c['c'], time.strftime("%H:%M:%S"), c['nc']
-            )
-    )
+    #y=[]
+    #for im in gt_names:
+    #    image=cv2.imread(im)
+    #    if image is None: raise Exception("not read "+im)
+    #    y.append((np.mean(image,axis=-1)< 50).astype(np.uint8))
+
+    y = [(np.mean(cv2.imread(im),axis=-1)< 50).astype(np.uint8)for im in gt_names]
+
+    print(y)
+
+    mosaics = [cv2.imread(c_i) for c_i in cases]
+
+    print(mosaics)
+
     x = [
-        np.moveaxis(
-            np.concatenate([mosaic, np.expand_dims(dem[..., 0], -1)], -1),
-            -1, 0
-        )
-        for mosaic, dem in zip(mosaics, dems)
+         np.moveaxis(mosaic, -1, 0)
+        for mosaic in mosaics
     ]
 
     mean_x = [np.mean(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
@@ -473,7 +449,7 @@ def train_test_net(net_name, dem_name='nDEM', ratio=10, verbose=1):
 
 
 
-    train(cases, gt_names, net_name, dem_name, ratio, verbose)
+    train(cases, gt_names, net_name, ratio, verbose)
 
 
 def main():
@@ -495,7 +471,7 @@ def main():
     for x in siteFolders:checkGT(d_path+x,x,speciesList)
 
 
-    gt_names = [d_path+"/"+x+"GT.jpg" for x in siteFolders ]
+    gt_names = [d_path+"/"+x+"/"+x+"GT.jpg" for x in siteFolders ]
     print(gt_names)
 
     cases = [ d_path+x+"/"+x+".jpg" for x in siteFolders ]

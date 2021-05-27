@@ -299,7 +299,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
         pred_y = np.argmax(yi[0], axis=0)
 
         cv2.imwrite(case[:-4]+"Result.jpg",
-            (pred_y * 255).astype(np.uint8)
+            (pred_y).astype(np.uint8)
         )
 
     if verbose > 0:

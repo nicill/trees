@@ -112,7 +112,7 @@ Networks
 """
 
 
-def train(cases, gt_names, net_name, ratio=10, verbose=1):
+def train(cases, gt_names, net_name, ratio=10, verbose=1,nClasses=47):
     # Init
     print("\n\n\n\n STARTING TRAIN  ")
     options = parse_inputs()
@@ -139,19 +139,19 @@ def train(cases, gt_names, net_name, ratio=10, verbose=1):
     print("reading GT ")
     print(gt_names)
 
-    #y=[]
-    #for im in gt_names:
-    #    image=cv2.imread(im)
-    #    if image is None: raise Exception("not read "+im)
-    #    y.append((np.mean(image,axis=-1)< 50).astype(np.uint8))
+    y=[]
+    for im in gt_names:
+        image=cv2.imread(im)
+        if image is None: raise Exception("not read "+im)
+        y.append((np.mean(image,axis=-1)< 50).astype(np.uint8))
 
-    y = [(np.mean(cv2.imread(im),axis=-1)< 50).astype(np.uint8)for im in gt_names]
+    #y = [(np.mean(cv2.imread(im),axis=-1)< 50).astype(np.uint8)for im in gt_names]
 
-    print(y)
+    #print(y)
 
     mosaics = [cv2.imread(c_i) for c_i in cases]
 
-    print(mosaics)
+    #print(mosaics)
 
     x = [
          np.moveaxis(mosaic, -1, 0)
@@ -199,7 +199,7 @@ def train(cases, gt_names, net_name, ratio=10, verbose=1):
         model_name = '{:}.d{:}.unc.mosaic{:}.mdl'.format(
             net_name, ratio, case
         )
-        net = Unet2D(n_inputs=len(norm_x[0]))
+        net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
 
         try:
             net.load_model(os.path.join(d_path, model_name))
@@ -483,9 +483,9 @@ def main():
 
     ''' <Detection task> '''
     net_name = 'tree-detection.nDEM.unet'
-    train(cases, gt_names, net_name, 'nDEM')
+    train(cases, gt_names, net_name, 'nDEM',47)
     net_name = 'tree-detection.DEM.unet'
-    train(cases, gt_names, net_name, 'DEM')
+    train(cases, gt_names, net_name, 'DEM',47)
 
     eval(cases, gt_names)
 

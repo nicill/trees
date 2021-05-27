@@ -112,7 +112,7 @@ Networks
 """
 
 
-def train(cases, gt_names, net_name, ratio=10, verbose=1,nClasses=47):
+def train(cases, gt_names, net_name, nClasses=47, verbose=1):
     # Init
     print("\n\n\n\n STARTING TRAIN  ")
     options = parse_inputs()
@@ -196,8 +196,8 @@ def train(cases, gt_names, net_name, ratio=10, verbose=1,nClasses=47):
         overlap = (32, 32)
         num_workers = 1
 
-        model_name = '{:}.d{:}.unc.mosaic{:}.mdl'.format(
-            net_name, ratio, case
+        model_name = '{:}.unc.mosaic{:}.mdl'.format(
+            net_name, case
         )
         net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
 
@@ -285,42 +285,13 @@ def train(cases, gt_names, net_name, ratio=10, verbose=1,nClasses=47):
                     c['c'], i + 1, len(cases), c['nc']
                 )
             )
-
-        downtest_x = imresize(
-            test_x,
-            (test_x.shape[0],) + tuple(
-                [length // ratio for length in test_x.shape[1:]]
-            )
-        )
-        yi, unci = net.test([downtest_x], patch_size=None)
-
-        upyi = imresize(yi[0], test_x.shape[1:])
-
-        upunci = imresize(unci[0], test_x.shape[1:])
+        yi = net.test([test_x], patch_size=None)
 
         cv2.imwrite(
-            os.path.join(d_path, 'pred.ds{:}.{:}_trees{:}.jpg'.format(
-                ratio, dem_name, case
+            os.path.join(d_path, 'pred{:}.jpg'.format(
+                case
             )),
             (yi[0] * 255).astype(np.uint8)
-        )
-        cv2.imwrite(
-            os.path.join(d_path, 'pred.d{:}.{:}_trees{:}.jpg'.format(
-                ratio, dem_name, case
-            )),
-            (upyi * 255).astype(np.uint8)
-        )
-        cv2.imwrite(
-            os.path.join(d_path, 'unc.ds{:}.{:}_trees{:}.jpg'.format(
-                ratio,  dem_name, case
-            )),
-            (unci[0] * 255).astype(np.uint8)
-        )
-        cv2.imwrite(
-            os.path.join(d_path, 'unc.d{:}.{:}_trees{:}.jpg'.format(
-                ratio,  dem_name, case
-            )),
-            (upunci * 255).astype(np.uint8)
         )
 
     if verbose > 0:
@@ -332,93 +303,6 @@ def train(cases, gt_names, net_name, ratio=10, verbose=1,nClasses=47):
             '%sTraining finished%s (total time %s)\n' %
             (c['r'], c['nc'], time_str)
         )
-
-
-def eval(cases, gt_names, ratio=10):
-    # Init
-    options = parse_inputs()
-    d_path = options['val_dir']
-    names = ['nDEM', 'DEM']
-
-    for i, case in enumerate(cases):
-
-        test_y = np.mean(
-            cv2.imread(os.path.join(d_path, gt_names[i])), axis=-1
-        ) < 10
-
-        gt_list = list_from_mask(test_y.astype(np.uint8))
-        n_gt = len(gt_list)
-
-        for dem_name in names:
-            upyi = np.mean(
-                cv2.imread(
-                    os.path.join(
-                        d_path, 'pred.d{:}.{:}_trees{:}.jpg'.format(
-                            ratio, dem_name, case
-                        )
-                    )
-                ), axis=-1
-            ) / 255
-            unet_bool = upyi > 0.5
-            unet_list = list_from_mask(unet_bool.astype(np.uint8))
-            n_unet = len(unet_list)
-
-            hd = hausdorf_distance(gt_list, unet_list)
-            match = matched_percentage(gt_list, unet_list, 150)
-            inv_match = matched_percentage(unet_list, gt_list, 150)
-            diff = 100 * (n_gt - n_unet) / n_gt
-            avg_ed = avg_euclidean_distance(gt_list, unet_list)
-
-            trees = find_file('mosaic{:}tree'.format(case), d_path)
-
-            if trees is None:
-                print(
-                    'Z{:} ({:}) Hausdorf = {:5.3f} / Euclidean = {:5.3f} '
-                    'tops (seg: {:3d}, gt: {:3d}, match: {:5.3f}, '
-                    'inverse match: {:5.3f}, diff: {:5.3f})'.format(
-                        case, dem_name, hd, avg_ed, n_unet, n_gt, match,
-                        inv_match, diff
-                    )
-                )
-            else:
-                bck = (np.mean(cv2.imread(trees), axis=-1) < 2).astype(
-                    np.uint8
-                )
-                fupyi = upyi * bck
-
-                funet_bool = fupyi > 0.5
-
-                funet_list = list_from_mask(funet_bool.astype(np.uint8))
-                fgt_list = list_from_mask(test_y.astype(np.uint8) * bck)
-                n_funet = len(funet_list)
-                n_fgt = len(fgt_list)
-
-                fhd = hausdorf_distance(fgt_list, funet_list)
-                fmatch = matched_percentage(fgt_list, funet_list, 150)
-                finv_match = matched_percentage(funet_list, fgt_list, 150)
-                fdiff = 100 * (n_fgt - n_funet) / n_fgt
-                favg_ed = avg_euclidean_distance(fgt_list, funet_list)
-
-                print(
-                    'Mosaic {:} Hausdorf = {:5.3f} vs {:5.3f} / '
-                    'Euclidean = {:5.3f} vs {:5.3f} '
-                    'tops (seg: {:3d} vs {:3d}, gt: {:3d} vs {:3d}, '
-                    'match: {:5.3f} vs {:5.3f}, '
-                    'inverse match: {:5.3f} vs {:5.3f}, '
-                    'diff: {:5.3f} vs {:5.3f})'.format(
-                        case, hd, fhd, avg_ed, favg_ed,
-                        n_unet, n_funet, n_gt, n_fgt, match, fmatch,
-                        inv_match, finv_match, diff, fdiff
-                    )
-                )
-                cv2.imwrite(
-                    os.path.join(
-                        d_path, 'pred.fd{:}.{:}_trees{:}.jpg'.format(
-                            ratio, dem_name, case
-                        )
-                    ),
-                    (upyi * 255).astype(np.uint8)
-                )
 
 
 def train_test_net(net_name, dem_name='nDEM', ratio=10, verbose=1):
@@ -482,12 +366,8 @@ def main():
     print(rois)
 
     ''' <Detection task> '''
-    net_name = 'tree-detection.nDEM.unet'
-    train(cases, gt_names, net_name, 'nDEM',47)
-    net_name = 'tree-detection.DEM.unet'
-    train(cases, gt_names, net_name, 'DEM',47)
-
-    eval(cases, gt_names)
+    net_name = 'semantic-unet'
+    train(cases, gt_names, net_name, 47)
 
 
 if __name__ == '__main__':

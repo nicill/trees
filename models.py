@@ -109,7 +109,7 @@ class Unet2D(BaseModel):
         )
 
         # Final segmentation block.
-        if n_ouputs == 1:
+        if n_outputs == 1:
             n_outputs = 2
         self.seg = nn.Sequential(
             nn.Conv2d(conv_filters[0], conv_filters[0], 1),

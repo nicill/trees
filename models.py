@@ -134,7 +134,7 @@ class Unet2D(BaseModel):
             # The weight is 0 because I feel like DSC is more important.
             {
                 'name': 'xentr',
-                'weight': 0,
+                'weight': 1,
                 'f': lambda p, t: cross_entropy(p, t)
             }
         ]

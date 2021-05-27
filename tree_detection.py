@@ -155,8 +155,8 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
     rois = [cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) for c_i in roiNames]
 
     #take into account the ROIS, paint black outside
-    #for i in range(len(mosaics)):
-    #    mosaics[i][rois[i]==255]=(0,0,0)
+    for i in range(len(mosaics)):
+        mosaics[i][rois[i]==255]=(0,0,0)
 
     #print(mosaics)
 
@@ -196,8 +196,8 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
         train_x = norm_x[:i] + norm_x[i + 1:]
 
         val_split = 0.1
-        batch_size = 32
-        patch_size = (256, 256)
+        batch_size = 8
+        patch_size = (128, 128)
         #patch_size = (64, 64)
         # overlap = (64, 64)
         overlap = (32, 32)

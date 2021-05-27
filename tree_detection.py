@@ -19,8 +19,8 @@ def checkGT(folder,siteName,sList):
     #print(fileList)
 
     #go over each folder, if a GT file does not exist, create it
-    if not(siteName+"GT.jpg" in fileList):
-        print("no GT! "+siteName+"GT.jpg")
+    if not(siteName+"GT.png" in fileList):
+        print("no GT! "+siteName+"GT.png")
         #read ROI
         roiFile=folder+"/"+siteName+"ROI.jpg"
         roi=cv2.imread(roiFile,cv2.IMREAD_GRAYSCALE)
@@ -33,12 +33,11 @@ def checkGT(folder,siteName,sList):
             currentMask=cv2.imread(currentMaskFile,cv2.IMREAD_GRAYSCALE)
             if currentMask is None: print("species "+sList[i]+" not present in site "+siteName)
             else: mask[currentMask==0]=i #masks are black on white background
-            #cv2.imwrite(folder+"/"+siteName+"GT.jpg",mask)
 
 
         # in the end, put everything outside thr ROI to background
         mask[roi>100]=0
-        cv2.imwrite(folder+"/"+siteName+"GT.jpg",mask)
+        cv2.imwrite(folder+"/"+siteName+"GT.png",mask)
 
 
 def parse_inputs():
@@ -112,7 +111,7 @@ Networks
 """
 
 
-def train(cases, gt_names, net_name, nClasses=47, verbose=1):
+def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
     # Init
     print("\n\n\n\n STARTING TRAIN  ")
     options = parse_inputs()
@@ -141,15 +140,23 @@ def train(cases, gt_names, net_name, nClasses=47, verbose=1):
 
     y=[]
     for im in gt_names:
-        image=cv2.imread(im)
+        image=cv2.imread(im,cv2.IMREAD_GRAYSCALE)
         if image is None: raise Exception("not read "+im)
-        y.append((np.mean(image,axis=-1)< 50).astype(np.uint8))
+        #y.append((np.mean(image,axis=-1)< 50).astype(np.uint8))
+        y.append(image.astype(np.uint8))
+
+    for yi in y: print(np.unique(yi))
 
     #y = [(np.mean(cv2.imread(im),axis=-1)< 50).astype(np.uint8)for im in gt_names]
 
     #print(y)
 
     mosaics = [cv2.imread(c_i) for c_i in cases]
+    rois = [cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) for c_i in roiNames]
+
+    #take into account the ROIS, paint black outside
+    #for i in range(len(mosaics)):
+    #    mosaics[i][rois[i]==255]=(0,0,0)
 
     #print(mosaics)
 
@@ -190,8 +197,8 @@ def train(cases, gt_names, net_name, nClasses=47, verbose=1):
 
         val_split = 0.1
         batch_size = 32
-        # patch_size = (256, 256)
-        patch_size = (64, 64)
+        patch_size = (256, 256)
+        #patch_size = (64, 64)
         # overlap = (64, 64)
         overlap = (32, 32)
         num_workers = 1
@@ -231,7 +238,7 @@ def train(cases, gt_names, net_name, nClasses=47, verbose=1):
                 print('Training dataset (with validation)')
                 train_dataset = Cropping2DDataset(
                     d_train, l_train, patch_size=patch_size, overlap=overlap,
-                    filtered=True
+                    #filtered=True
                 )
 #                 train_dataset = CroppingDown2DDataset(
 #                     d_train, l_train, patch_size=patch_size, overlap=overlap,
@@ -289,9 +296,10 @@ def train(cases, gt_names, net_name, nClasses=47, verbose=1):
             )
         #yi = net.test([test_x], patch_size=None)
         yi = net.test([test_x])
+        pred_y = np.argmax(yi[0], axis=0)
 
         cv2.imwrite(case[:-4]+"Result.jpg",
-            (yi[0] * 255).astype(np.uint8)
+            (pred_y * 255).astype(np.uint8)
         )
 
     if verbose > 0:
@@ -355,7 +363,7 @@ def main():
     for x in siteFolders:checkGT(d_path+x,x,speciesList)
 
 
-    gt_names = [d_path+"/"+x+"/"+x+"GT.jpg" for x in siteFolders ]
+    gt_names = [d_path+"/"+x+"/"+x+"GT.png" for x in siteFolders ]
     print(gt_names)
 
     cases = [ d_path+x+"/"+x+".jpg" for x in siteFolders ]
@@ -367,7 +375,7 @@ def main():
 
     ''' <Detection task> '''
     net_name = 'semantic-unet'
-    train(cases, gt_names, net_name, 47)
+    train(cases, gt_names, rois, net_name, 47)
 
 
 if __name__ == '__main__':

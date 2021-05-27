@@ -111,6 +111,7 @@ class Unet2D(BaseModel):
         # Final segmentation block.
         if n_outputs == 1:
             n_outputs = 2
+        self.n_outputs = n_outputs
         self.seg = nn.Sequential(
             nn.Conv2d(conv_filters[0], conv_filters[0], 1),
             nn.ReLU(),
@@ -180,7 +181,7 @@ class Unet2D(BaseModel):
             if patch_size is not None:
 
                 # Initial results. Filled to 0.
-                seg_i = np.zeros(im.shape[1:])
+                seg_i = np.zeros((self.n_outputs,) + im.shape[1:])
 
                 limits = tuple(
                     list(range(0, lim, patch_size))[:-1] + [lim - patch_size]

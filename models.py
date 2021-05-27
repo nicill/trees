@@ -184,7 +184,7 @@ class Unet2D(BaseModel):
 
                 limits = tuple(
                     list(range(0, lim, patch_size))[:-1] + [lim - patch_size]
-                    for lim in data.shape[1:]
+                    for lim in im.shape[1:]
                 )
                 limits_product = list(itertools.product(*limits))
 

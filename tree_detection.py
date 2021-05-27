@@ -196,13 +196,15 @@ def train(cases, gt_names, net_name, nClasses=47, verbose=1):
         overlap = (32, 32)
         num_workers = 1
 
-        model_name = '{:}.unc.mosaic{:}.mdl'.format(
-            net_name, case
-        )
+        #model_name = '{:}.unc.mosaic{:}.mdl'.format(net_name, case)
+        model_name = case[:-4]+"unc.mosaic"+net_name+".mdl"
         net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
 
+        print("MODEL NAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print(model_name)
+
         try:
-            net.load_model(os.path.join(d_path, model_name))
+            net.load_model( model_name)
         except IOError:
 
             # Dataloader creation
@@ -274,7 +276,7 @@ def train(cases, gt_names, net_name, nClasses=47, verbose=1):
                 patience=patience,
             )
 
-            net.save_model(os.path.join(d_path, model_name))
+            net.save_model( model_name)
 
         if verbose > 0:
             print(
@@ -285,12 +287,10 @@ def train(cases, gt_names, net_name, nClasses=47, verbose=1):
                     c['c'], i + 1, len(cases), c['nc']
                 )
             )
-        yi = net.test([test_x], patch_size=None)
+        #yi = net.test([test_x], patch_size=None)
+        yi = net.test([test_x])
 
-        cv2.imwrite(
-            os.path.join(d_path, 'pred{:}.jpg'.format(
-                case
-            )),
+        cv2.imwrite(case[:-4]+"Result.jpg",
             (yi[0] * 255).astype(np.uint8)
         )
 

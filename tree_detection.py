@@ -157,9 +157,9 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
     #take into account the ROIS, paint black outside
     for i in range(len(mosaics)):
         mosaics[i][rois[i]==255]=(0,0,0)
+        #cv2.imwrite(str(i)+"pata.jpg",mosaics[i])
 
     #print(mosaics)
-
     x = [
          np.moveaxis(mosaic, -1, 0)
         for mosaic in mosaics
@@ -298,7 +298,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
         yi = net.test([test_x])
         pred_y = np.argmax(yi[0], axis=0)
 
-        cv2.imwrite(case[:-4]+"Result.jpg",
+        cv2.imwrite(case[:-4]+"Result.png",
             (pred_y).astype(np.uint8)
         )
 

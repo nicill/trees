@@ -28,7 +28,7 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
 
     try:
         totalPixels=np.sum(ROI<10)
-        print("total Pixels in ROI "+str(totalPixels))
+        #print("total Pixels in ROI "+str(totalPixels))
     except:
         print("NO ROI")
         totalPixels=mask1.shape[0]*mask1.shape[1]
@@ -36,7 +36,7 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
     im=mask1-mask2 # subtract masks to find out equal pixels
 
     im[ROI>200]=-1
-    print(np.sum(im == 0))
+    #print(np.sum(im == 0))
 
     return np.sum(im == 0)/totalPixels
 

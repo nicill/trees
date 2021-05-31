@@ -238,7 +238,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
                 print('Training dataset (with validation)')
                 train_dataset = Cropping2DDataset(
                     d_train, l_train, patch_size=patch_size, overlap=overlap,
-                    #filtered=True
+                    filtered=True
                 )
 #                 train_dataset = CroppingDown2DDataset(
 #                     d_train, l_train, patch_size=patch_size, overlap=overlap,

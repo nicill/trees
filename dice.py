@@ -24,18 +24,29 @@ def FPPerc(gtMask,predictedMask):
     FP=np.sum(auxMask == 255)
     return FP/total
 
-def equalValue(mask1,mask2,includeBKG=False):# return the percentage of pixels with the same value
-    if includeBKG: totalPixels=mask1.shape[0]*mask1.shape[1]
-    else:
-        totalPixels=np.sum(mask1 != 0)
-        mask2[mask1==0]=-1 #take out of the calculation the background pixels of mask1
+def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the same value
+
+    try:
+        totalPixels=np.sum(ROI<10)
+        print("total Pixels in ROI "+str(totalPixels))
+    except:
+        print("NO ROI")
+        totalPixels=mask1.shape[0]*mask1.shape[1]
 
     im=mask1-mask2 # subtract masks to find out equal pixels
 
-    if includeBKG: return 100*np.sum(im == 0)/totalPixels
-    else: return 100*np.sum(im == 0)/totalPixels
+    im[ROI>200]=-1
+    print(np.sum(im == 0))
 
-def RecallLabelI(gt,predicted,i):# return the percentage of pixels of class i correctly matched over the total of positives
+    return np.sum(im == 0)/totalPixels
+
+#recall, how many positives did we catch
+def RecallLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of class i correctly matched over the total of positives
+    try:
+        predicted[ROI<10]=255
+    except:
+        print("NO ROI")
+
     totalPos=np.sum(gt==i)
     if totalPos!=0:
         # take out of the calculations all but class i in the ground truth
@@ -44,7 +55,15 @@ def RecallLabelI(gt,predicted,i):# return the percentage of pixels of class i co
 
         return np.sum(gt==0)/totalPos
     else: return -1
-def PrecisionLabelI(gt,predicted,i):# return the percentage of pixels of class i incorrectly matched over the total of positives
+
+#precision, how many of those predicted are correct
+def PrecisionLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of class i incorrectly matched over the total of positives
+    try:
+        predicted[ROI<10]=255
+    except:
+        print("NO ROI")
+
+
     #First, TP
     aux=predicted.copy()
     aux[gt!=i]=255

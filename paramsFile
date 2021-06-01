@@ -1,0 +1,3 @@
+# FORMAT: files with their full path, separated by white spaces, each line starts with FUSE: . The first file one is the data path, the second the name of the output Mask, the rest the names masks to be fused
+
+FUSE: /media/yago/workDrive/Experiments/forests/treeSpeciesClassification/trees/Data/Species_Classification/Data_Sarah/S1/ S1SNEWNUMBER.png S1S01.jpg S1S02.jpg S1S03.jpg S1S04.jpg

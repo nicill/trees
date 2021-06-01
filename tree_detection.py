@@ -29,14 +29,16 @@ def checkGT(folder,siteName,sList):
         mask[roi>10]=0 #now the mask is completely black
         #now go over the list of sites and add the code of the classes present
         for i in range(len(sList)):
+            #print("label "+str(i))
             currentMaskFile=folder+"/"+siteName+sList[i]+".jpg"
             currentMask=cv2.imread(currentMaskFile,cv2.IMREAD_GRAYSCALE)
             if currentMask is None: print("species "+sList[i]+" not present in site "+siteName)
-            else: mask[currentMask==0]=i #masks are black on white background
+            else: mask[currentMask<100]=i #masks are black on white background
 
 
         # in the end, put everything outside thr ROI to background
         mask[roi>100]=0
+        #print(np.unique(mask))
         cv2.imwrite(folder+"/"+siteName+"GT.png",mask)
 
 

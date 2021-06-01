@@ -43,7 +43,7 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
 #recall, how many positives did we catch
 def RecallLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of class i correctly matched over the total of positives
     try:
-        predicted[ROI<10]=255
+        predicted[ROI>50]=255
     except:
         print("NO ROI")
 
@@ -59,7 +59,7 @@ def RecallLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of 
 #precision, how many of those predicted are correct
 def PrecisionLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of class i incorrectly matched over the total of positives
     try:
-        predicted[ROI<10]=255
+        predicted[ROI>50]=255
     except:
         print("NO ROI")
 

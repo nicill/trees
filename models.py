@@ -95,7 +95,7 @@ class Unet2D(BaseModel):
         super(Unet2D, self).__init__()
         # Init values
         if conv_filters is None:
-            conv_filters = [32, 64, 128, 256]
+            conv_filters = [32, 64, 128, 256,512]
         self.epoch = 0
         self.t_train = 0
         self.t_val = 0

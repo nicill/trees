@@ -19,7 +19,7 @@ def main(argv):
 
 
     code=int(argv[3])
-    numClasses=46
+    numClasses=12
 
     try:
         ROI=cv2.imread(argv[4],cv2.IMREAD_GRAYSCALE).astype("uint8")

@@ -184,7 +184,9 @@ class Unet2D(BaseModel):
                 seg_i = np.zeros((self.n_outputs,) + im.shape[1:])
 
                 limits = tuple(
-                    list(range(0, lim, patch_size))[:-1] + [lim - patch_size]
+                    list(
+                        range(0, lim - patch_size, patch_size // 4)
+                    ) + [lim - patch_size]
                     for lim in im.shape[1:]
                 )
                 limits_product = list(itertools.product(*limits))

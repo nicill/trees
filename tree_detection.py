@@ -26,7 +26,7 @@ def checkGT(folder,siteName,sList):
         roi=cv2.imread(roiFile,cv2.IMREAD_GRAYSCALE)
         if roi is None:raise Exception("NO ROI found in site "+roiFile+"")
         mask=roi.copy()
-        mask[roi>0]=0 #now the mask is completely black
+        mask[roi>10]=0 #now the mask is completely black
         #now go over the list of sites and add the code of the classes present
         for i in range(len(sList)):
             currentMaskFile=folder+"/"+siteName+sList[i]+".jpg"
@@ -120,19 +120,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
     n_folds = len(gt_names)
     print("starting cases")
     print(cases)
-    #cases = [
-    #    c_i for c_i in cases
-    #    if find_file('Z{:}.jpg'.format(c_i + dem_name), d_path)
-    #]
 
-    #print(
-    #        '{:}[{:}]{:} Loading all mosaics and DEMs{:}'.format(
-    #            c['c'], time.strftime("%H:%M:%S"), c['g'], c['nc']
-    #        )
-    #)
-    #for c_i in cases:
-    #    mosaic = cv2.imread(c_i)
-    #    print(c_i, mosaic.shape)
 
 
     print("reading GT ")
@@ -145,6 +133,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
         #y.append((np.mean(image,axis=-1)< 50).astype(np.uint8))
         y.append(image.astype(np.uint8))
 
+    #Print Unique values
     for yi in y: print(np.unique(yi))
 
     #y = [(np.mean(cv2.imread(im),axis=-1)< 50).astype(np.uint8)for im in gt_names]
@@ -238,7 +227,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
                 print('Training dataset (with validation)')
                 train_dataset = Cropping2DDataset(
                     d_train, l_train, patch_size=patch_size, overlap=overlap,
-                    #filtered=True
+                    filtered=True
                 )
 #                 train_dataset = CroppingDown2DDataset(
 #                     d_train, l_train, patch_size=patch_size, overlap=overlap,
@@ -313,43 +302,16 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
         )
 
 
-def train_test_net(net_name, dem_name='nDEM', ratio=10, verbose=1):
-    """
 
-    :param net_name:
-    :return:
-    """
-    # Init
-    options = parse_inputs()
-
-    # Data loading (or preparation)
-    d_path = options['val_dir']
-    gt_names = sorted(
-        filter(
-            lambda xi: not os.path.isdir(xi)
-                       and re.search(options['lab_tag'], xi),
-            os.listdir(d_path)
-        ),
-        key=find_number
-    )
-    cases_pre = [str(find_number(r)) for r in gt_names]
-    gt_names = [
-        gt for c, gt in zip(cases_pre, gt_names)
-        if find_file('Z{:}.jpg'.format(c), d_path)
-    ]
-    cases = [c for c in cases_pre if find_file('Z{:}.jpg'.format(c), d_path)]
-
-
-
-    train(cases, gt_names, net_name, ratio, verbose)
 
 
 def main():
     #S00 is the background class
-    maxSpeciesCode=46
+    maxSpeciesCode=11
     speciesList=["S"+'{:02d}'.format(i) for i in range(0,maxSpeciesCode+1)]
+    speciesList.append("Other")
 
-    #print(speciesList)
+    print(speciesList)
 
     # Init
     options = parse_inputs()
@@ -375,7 +337,7 @@ def main():
 
     ''' <Detection task> '''
     net_name = 'semantic-unet'
-    train(cases, gt_names, rois, net_name, 47)
+    train(cases, gt_names, rois, net_name, maxSpeciesCode+2)
 
 
 if __name__ == '__main__':

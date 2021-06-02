@@ -144,12 +144,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
     #print(y)
 
     mosaics = [cv2.imread(c_i) for c_i in cases]
-    rois = [cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) for c_i in roiNames]
-
-    #take into account the ROIS, paint black outside
-    for i in range(len(mosaics)):
-        mosaics[i][rois[i]==255]=(0,0,0)
-        #cv2.imwrite(str(i)+"pata.jpg",mosaics[i])
+    rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 50).astype(np.uint8) for c_i in roiNames]
 
     #print(mosaics)
     x = [
@@ -185,6 +180,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
         test_x = norm_x[i]
 
         train_y = y[:i] + y[i + 1:]
+        train_roi = rois[:i] + rois[i + 1:]
         train_x = norm_x[:i] + norm_x[i + 1:]
 
         val_split = 0.1
@@ -226,10 +222,13 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
 
                 l_train = train_y[:n_t_samples]
                 l_val = train_y[n_t_samples:]
+                
+                r_train = train_roi[:n_t_samples]
+                r_val = train_roi[n_t_samples:]
 
                 print('Training dataset (with validation)')
                 train_dataset = Cropping2DDataset(
-                    d_train, l_train, patch_size=patch_size, overlap=overlap,
+                    d_train, l_train, r_train, patch_size=patch_size, overlap=overlap,
                     filtered=True
                 )
 #                 train_dataset = CroppingDown2DDataset(
@@ -239,7 +238,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
 
                 print('Validation dataset (with validation)')
                 val_dataset = Cropping2DDataset(
-                    d_val, l_val, patch_size=patch_size, overlap=overlap,
+                    d_val, l_val, r_val, patch_size=patch_size, overlap=overlap,
                     filtered=True
                 )
 #                 val_dataset = CroppingDown2DDataset(
@@ -249,13 +248,13 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
             else:
                 print('Training dataset')
                 train_dataset = Cropping2DDataset(
-                    train_x, train_y, patch_size=patch_size, overlap=overlap,
+                    train_x, train_y, train_roi, patch_size=patch_size, overlap=overlap,
                     filtered=True
                 )
 
                 print('Validation dataset')
                 val_dataset = Cropping2DDataset(
-                    train_x, train_y, patch_size=patch_size, overlap=overlap
+                    train_x, train_y, train_roi, patch_size=patch_size, overlap=overlap
                 )
 
             train_dataloader = DataLoader(

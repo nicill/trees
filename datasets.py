@@ -87,8 +87,8 @@ class Cropping2DDataset(Dataset):
         )
         if filtered:
             self.patch_slices = [
-                (s, i) for i, (label, slices_i) in enumerate(zip(self.labels, slices))
-                for s in slices_i if np.sum(label[s]) > 0
+                (s, i) for i, (roi, slices_i) in enumerate(zip(self.rois, slices))
+                for s in slices_i if np.sum(roi[s]) > 0
             ]
         else:
             self.patch_slices = [

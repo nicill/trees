@@ -126,7 +126,7 @@ class Unet2D(BaseModel):
             {
                 'name': 'xentr',
                 'weight': 1,
-                'f': lambda p, t: cross_entropy(p, t)
+                'f': lambda p, t: cross_entropy(p[0], t, p[1])
             }
         ]
         self.val_functions = [
@@ -135,7 +135,7 @@ class Unet2D(BaseModel):
             {
                 'name': 'xentr',
                 'weight': 1,
-                'f': lambda p, t: cross_entropy(p, t)
+                'f': lambda p, t: cross_entropy(p[0], t, p[1])
             }
         ]
 
@@ -149,13 +149,17 @@ class Unet2D(BaseModel):
         # self.dropout = 0.99
         # self.ann_rate = 1e-2
 
-    def forward(self, input_ae):
+    def forward(self, input_ae, mask=None):
         input_s = self.autoencoder(input_ae)
 
         # Since we are dealing with a binary problem, there is no need to use
         # softmax.
         seg = torch.softmax(self.seg(input_s), dim=1)
-        return seg
+        
+        if mask is None:
+            return seg
+        else:
+            return seg, mask
 
     def test(
             self, data, patch_size=256, verbose=True

@@ -69,11 +69,12 @@ def get_slices(masks, patch_size, overlap):
 class Cropping2DDataset(Dataset):
     def __init__(
             self,
-            data, labels, patch_size=32, overlap=16, filtered=False
+            data, labels, rois, patch_size=32, overlap=16, filtered=False
     ):
         # Init
         self.data = data
         self.labels = labels
+        self.rois = rois
         data_shape = self.data[0].shape
 
         if type(patch_size) is not tuple:
@@ -82,7 +83,7 @@ class Cropping2DDataset(Dataset):
         self.overlap = overlap
 
         slices = get_slices(
-            self.labels, self.patch_size, self.overlap
+            self.rois, self.patch_size, self.overlap
         )
         if filtered:
             self.patch_slices = [
@@ -101,7 +102,12 @@ class Cropping2DDataset(Dataset):
         # We get the slice indexes
         none_slice = (slice(None, None),)
 
-        inputs = self.data[case_idx][none_slice + slice_i].astype(np.float32)
+        inputs = (
+            self.data[case_idx][none_slice + slice_i].astype(np.float32),
+            np.expand_dims(
+                self.rois[case_idx][slice_i].astype(np.uint8), axis=0
+            )
+        )
 
         target = np.expand_dims(
             self.labels[case_idx][slice_i].astype(np.uint8), axis=0
@@ -119,7 +125,7 @@ class Cropping2DDataset(Dataset):
 class CroppingDown2DDataset(Cropping2DDataset):
     def __init__(
             self,
-            data, labels, patch_size=32, overlap=16, filtered=False,
+            data, labels, rois, patch_size=32, overlap=16, filtered=False,
             ratio=10
     ):
         # Init
@@ -138,4 +144,10 @@ class CroppingDown2DDataset(Cropping2DDataset):
             ).squeeze(dim=0).numpy().astype(np.bool)
             for lab in labels
         ]
-        super().__init__(downdata, downlabels, patch_size, overlap, filtered)
+        downrois = [
+            torch.max_pool2d(
+                torch.tensor(np.expand_dims(roi, 0)).type(torch.float32), ratio
+            ).squeeze(dim=0).numpy().astype(np.bool)
+            for roi in rois
+        ]
+        super().__init__(downdata, downlabels, downrois, patch_size, overlap, filtered)

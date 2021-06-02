@@ -144,7 +144,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
     #print(y)
 
     mosaics = [cv2.imread(c_i) for c_i in cases]
-    rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 50).astype(np.uint8) for c_i in roiNames]
+    rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
 
     #print(mosaics)
     x = [
@@ -222,7 +222,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
 
                 l_train = train_y[:n_t_samples]
                 l_val = train_y[n_t_samples:]
-                
+
                 r_train = train_roi[:n_t_samples]
                 r_val = train_roi[n_t_samples:]
 

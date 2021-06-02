@@ -350,8 +350,8 @@ def cross_entropy(pred, target, mask):
         assert torch.max(target) <= n_classes, 'Wrong number of classes for GT'
         target = torch.cat([target == i for i in range(n_classes)], dim=1)
         target = target.type_as(pred)
-    pred_valid = pred[mask.repeat(-1, n_classes, -1, -1)]
-    target_valid = target[mask.repeat(-1, n_classes, -1, -1)]
+    pred_valid = pred[mask.expand(-1, n_classes, -1, -1)]
+    target_valid = target[mask.expand(-1, n_classes, -1, -1)]
 
     xent = F.binary_cross_entropy(pred_valid, target_valid)
 

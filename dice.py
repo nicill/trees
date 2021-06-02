@@ -27,7 +27,7 @@ def FPPerc(gtMask,predictedMask):
 def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the same value
 
     try:
-        totalPixels=np.sum(ROI<10)
+        totalPixels=np.sum(ROI!=0)
         #print("total Pixels in ROI "+str(totalPixels))
     except:
         print("NO ROI")
@@ -35,7 +35,7 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
 
     im=mask1-mask2 # subtract masks to find out equal pixels
 
-    im[ROI>200]=-1
+    im[ROI==0]=-1
     #print(np.sum(im == 0))
 
     return np.sum(im == 0)/totalPixels
@@ -43,7 +43,9 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
 #recall, how many positives did we catch
 def RecallLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of class i correctly matched over the total of positives
     try:
-        predicted[ROI>50]=255
+        #take out of the calculations the pixels outside the ROI
+        predicted[ROI==0]=255
+        gt[ROI==0]=-1
     except:
         print("NO ROI")
 
@@ -51,27 +53,30 @@ def RecallLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of 
     if totalPos!=0:
         # take out of the calculations all but class i in the ground truth
         predicted[gt!=i]=255
-        gt=gt-predicted
 
-        return np.sum(gt==0)/totalPos
+        return np.sum(gt==predicted)/totalPos
     else: return -1
 
 #precision, how many of those predicted are correct
 def PrecisionLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of class i incorrectly matched over the total of positives
     try:
-        predicted[ROI>50]=255
+        predicted[ROI==0]=255
+        gt[ROI==0]=-1
     except:
         print("NO ROI")
-
 
     #First, TP
     aux=predicted.copy()
     aux[gt!=i]=255
     TP=np.sum(gt==aux)
+    #print(TP)
+
     #second FP
-    aux=predicted.copy()
-    aux[aux!=i]=255
-    FP=np.sum(aux==i)-np.sum(gt==aux)
+    aux=gt.copy()
+    aux[predicted!=i]=-1
+    FP=np.sum(aux!=-1)-np.sum(predicted==i)
+    #print(FP)
+
 
     if (TP+FP)!=0 : return TP/(TP+FP)
     else: return 0

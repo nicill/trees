@@ -22,7 +22,8 @@ def main(argv):
     numClasses=12
 
     try:
-        ROI=cv2.imread(argv[4],cv2.IMREAD_GRAYSCALE).astype("uint8")
+        ROI=(cv2.imread(argv[4],cv2.IMREAD_GRAYSCALE)<100).astype("uint8")
+        
     except:
         print("ROI NONE")
         ROI=None

@@ -114,7 +114,7 @@ Networks
 """
 
 
-def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
+def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=1):
     # Init
     print("\n\n\n\n STARTING TRAIN  ")
     options = parse_inputs()
@@ -124,15 +124,26 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
     print("starting cases")
     print(cases)
 
-
-
     print("reading GT ")
     print(gt_names)
 
     y=[]
+    counter=0
     for im in gt_names:
         image=cv2.imread(im,cv2.IMREAD_GRAYSCALE)
         if image is None: raise Exception("not read "+im)
+
+        if resampleF!=1:
+            image= np.argmax([cv2.resize((image==i).astype("uint8"), (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),interpolation=cv2.INTER_LINEAR) for i in range(nClasses) ], axis=0)
+
+            #resizedList=[]
+            #for i in range(nClasses):
+            #    toResize=(image==i).astype("uint8")
+            #    resizedList.append(cv2.resize(toResize, (int(image.shape[0]*resampleF),int(image.shape[1]*resampleF)),interpolation=cv2.INTER_LINEAR))
+            #image=np.argmax(resizedList)
+            cv2.imwrite("gt"+str(counter)+".png",image)
+
+        counter+=1
         #y.append((np.mean(image,axis=-1)< 50).astype(np.uint8))
         y.append(image.astype(np.uint8))
 
@@ -143,8 +154,24 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
 
     #print(y)
 
-    mosaics = [cv2.imread(c_i) for c_i in cases]
-    rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
+    if resampleF!=1:
+        mosaics = []
+        for c_i in cases:
+            image=cv2.imread(c_i)
+            mosaics.append(cv2.resize(image, (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),interpolation=cv2.INTER_CUBIC))
+        rois = []
+        for c_i in roiNames:
+            image=cv2.imread(c_i,cv2.IMREAD_GRAYSCALE)
+            rois.append( (cv2.resize(image, (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),
+            interpolation=cv2.INTER_LINEAR) < 100).astype(np.uint8) )
+    else:
+        mosaics = [cv2.imread(c_i) for c_i in cases]
+        rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
+
+    originalSizes= []
+    for c_i in cases:
+        nowIm=cv2.imread(c_i)
+        originalSizes.append((nowIm.shape[1],nowIm.shape[0]))
 
     #print(mosaics)
     x = [
@@ -285,13 +312,15 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
                     c['c'], i + 1, len(cases), c['nc']
                 )
             )
-        #yi = net.test([test_x], patch_size=None)
         yi = net.test([test_x])
         pred_y = np.argmax(yi[0], axis=0)
 
-        cv2.imwrite(case[:-4]+"Result.png",
-            (pred_y).astype(np.uint8)
-        )
+        if resampleF!=1:
+            cv2.imwrite(case[:-4]+"Result.png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))
+        else:
+            cv2.imwrite(case[:-4]+"Result.png",
+                (pred_y).astype(np.uint8)
+            )
 
     if verbose > 0:
         time_str = time.strftime(
@@ -304,11 +333,9 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1):
         )
 
 
-
-
-
 def main():
     #S00 is the background class
+    scalePercent=0.5
     maxSpeciesCode=11
     speciesList=["S"+'{:02d}'.format(i) for i in range(0,maxSpeciesCode+1)]
     speciesList.append("Other")
@@ -326,7 +353,6 @@ def main():
     #First, create ground truth files if they do not exist
     for x in siteFolders:checkGT(d_path+x,x,speciesList)
 
-
     gt_names = [d_path+"/"+x+"/"+x+"GT.png" for x in siteFolders ]
     print(gt_names)
 
@@ -339,7 +365,7 @@ def main():
 
     ''' <Detection task> '''
     net_name = 'semantic-unet'
-    train(cases, gt_names, rois, net_name, len(speciesList))
+    train(cases, gt_names, rois, net_name, len(speciesList),1,scalePercent)
 
 
 if __name__ == '__main__':

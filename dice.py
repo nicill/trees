@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image
 from PIL import ImageOps
 import warnings
+import cv2
 
 #return the percentage of black pixels in the ground truth covered by the predicted mask
 def coveredPerc(gtMask,predictedMask):
@@ -30,12 +31,15 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
         totalPixels=np.sum(ROI!=0)
         #print("total Pixels in ROI "+str(totalPixels))
     except:
-        print("NO ROI")
-        totalPixels=mask1.shape[0]*mask1.shape[1]
+        raise Exception("NO ROI")
+        #totalPixels=mask1.shape[0]*mask1.shape[1]
 
     im=mask1-mask2 # subtract masks to find out equal pixels
 
-    im[ROI==0]=-1
+    im[ROI==0]=255
+    im[im!=0]=255
+    cv2.imwrite("sampulla.png",im)
+
     #print(np.sum(im == 0))
 
     return np.sum(im == 0)/totalPixels
@@ -49,6 +53,11 @@ def RecallLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of 
     except:
         print("NO ROI")
 
+    sumEquals=np.sum(gt == i)
+    if sumEquals!=0:return np.sum(np.logical_and(gt == i, predicted == i)) / sumEquals
+    else:return 0
+
+    """
     totalPos=np.sum(gt==i)
     if totalPos!=0:
         # take out of the calculations all but class i in the ground truth
@@ -56,6 +65,7 @@ def RecallLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of 
 
         return np.sum(gt==predicted)/totalPos
     else: return -1
+    """
 
 #precision, how many of those predicted are correct
 def PrecisionLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of class i incorrectly matched over the total of positives

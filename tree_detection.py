@@ -92,7 +92,6 @@ def parse_inputs():
 def find_number(string):
     return int(''.join(filter(str.isdigit, string)))
 
-
 def hsv_mosaics(mosaics, dems, cases):
     # Data loading (or preparation)
     options = parse_inputs()
@@ -112,8 +111,6 @@ def hsv_mosaics(mosaics, dems, cases):
 """
 Networks
 """
-
-
 def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=1):
     # Init
     print("\n\n\n\n STARTING TRAIN  ")
@@ -141,7 +138,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
             #    toResize=(image==i).astype("uint8")
             #    resizedList.append(cv2.resize(toResize, (int(image.shape[0]*resampleF),int(image.shape[1]*resampleF)),interpolation=cv2.INTER_LINEAR))
             #image=np.argmax(resizedList)
-            cv2.imwrite("gt"+str(counter)+".png",image)
+            #cv2.imwrite("gt"+str(counter)+".png",image)
 
         counter+=1
         #y.append((np.mean(image,axis=-1)< 50).astype(np.uint8))
@@ -154,16 +151,25 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 
     #print(y)
 
+
     if resampleF!=1:
         mosaics = []
+        counter=0
         for c_i in cases:
             image=cv2.imread(c_i)
             mosaics.append(cv2.resize(image, (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),interpolation=cv2.INTER_CUBIC))
+            #cv2.imwrite("mos"+str(counter)+".png",mosaics[-1])
+            counter+=1
+
         rois = []
+        counter=0
         for c_i in roiNames:
             image=cv2.imread(c_i,cv2.IMREAD_GRAYSCALE)
             rois.append( (cv2.resize(image, (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),
             interpolation=cv2.INTER_LINEAR) < 100).astype(np.uint8) )
+            #cv2.imwrite("ROI"+str(counter)+".png",rois[-1])
+
+            counter+=1
     else:
         mosaics = [cv2.imread(c_i) for c_i in cases]
         rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
@@ -317,6 +323,10 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 
         if resampleF!=1:
             cv2.imwrite(case[:-4]+"Result.png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))
+            cv2.imwrite(case[:-4]+"ResultSMALL.png",
+                (pred_y).astype(np.uint8)
+            )
+
         else:
             cv2.imwrite(case[:-4]+"Result.png",
                 (pred_y).astype(np.uint8)
@@ -335,9 +345,10 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 
 def main():
     #S00 is the background class
-    scalePercent=0.5
-    maxSpeciesCode=11
+    scalePercent=0.25
+    maxSpeciesCode=9
     speciesList=["S"+'{:02d}'.format(i) for i in range(0,maxSpeciesCode+1)]
+    speciesList.append("S11")
     speciesList.append("Other")
 
     print(speciesList)

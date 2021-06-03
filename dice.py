@@ -38,7 +38,7 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
 
     im[ROI==0]=255
     im[im!=0]=255
-    cv2.imwrite("sampulla.png",im)
+    #cv2.imwrite("sampulla.png",im)
 
     #print(np.sum(im == 0))
 

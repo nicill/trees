@@ -186,6 +186,7 @@ class Unet2D(BaseModel):
 
                 # Initial results. Filled to 0.
                 seg_i = np.zeros((self.n_outputs,) + im.shape[1:])
+                counts_i = np.zeros((self.n_outputs,) + im.shape[1:])
 
                 limits = tuple(
                     list(
@@ -217,7 +218,8 @@ class Unet2D(BaseModel):
                         torch.cuda.empty_cache()
 
                     # Then we just fill the results image.
-                    seg_i[slice(None), xslice, yslice] = np.squeeze(seg_pi.cpu().numpy())
+                    seg_i[slice(None), xslice, yslice] += np.squeeze(seg_pi.cpu().numpy())
+                    counts_i[slice(None), xslice, yslice] += 1
 
                     # Printing
                     init_c = '\033[0m' if self.training else '\033[38;5;238m'
@@ -239,6 +241,8 @@ class Unet2D(BaseModel):
                     )
                     print('\033[K', end='', flush=True)
                     print(batch_s, end='\r', flush=True)
+                    
+                seg_i[counts_i > 0] = seg_i[counts_i > 0] / counts_i[counts_i > 0]
 
             else:
                 # If we use the whole image the process is way simpler.

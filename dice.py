@@ -45,49 +45,16 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
     return np.sum(im == 0)/totalPixels
 
 #recall, how many positives did we catch
-def RecallLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of class i correctly matched over the total of positives
-    try:
-        #take out of the calculations the pixels outside the ROI
-        predicted[ROI==0]=255
-        gt[ROI==0]=-1
-    except:
-        print("NO ROI")
-
+def RecallLabelI(gt,predicted,i):# return the percentage of pixels of class i correctly matched over the total of positives
     sumEquals=np.sum(gt == i)
     if sumEquals!=0:return np.sum(np.logical_and(gt == i, predicted == i)) / sumEquals
     else:return 0
 
-    """
-    totalPos=np.sum(gt==i)
-    if totalPos!=0:
-        # take out of the calculations all but class i in the ground truth
-        predicted[gt!=i]=255
-
-        return np.sum(gt==predicted)/totalPos
-    else: return -1
-    """
-
 #precision, how many of those predicted are correct
-def PrecisionLabelI(gt,predicted,i, ROI=None):# return the percentage of pixels of class i incorrectly matched over the total of positives
-    try:
-        predicted[ROI==0]=255
-        gt[ROI==0]=-1
-    except:
-        print("NO ROI")
+def PrecisionLabelI(gt,predicted,i):# return the percentage of pixels of class i incorrectly matched over the total of positives
 
-    #First, TP
-    aux=predicted.copy()
-    aux[gt!=i]=255
-    TP=np.sum(gt==aux)
-    #print(TP)
-
-    #second FP
-    aux=gt.copy()
-    aux[predicted!=i]=-1
-    FP=np.sum(aux!=-1)-np.sum(predicted==i)
-    #print(FP)
-
-
+    TP=np.sum(np.logical_and(gt == i, predicted == i))
+    FP=np.sum(np.logical_and(gt != i, predicted == i))
     if (TP+FP)!=0 : return TP/(TP+FP)
     else: return 0
 

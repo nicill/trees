@@ -19,11 +19,11 @@ def main(argv):
 
 
     code=int(argv[3])
-    numClasses=12
+    numClasses=11
 
     try:
-        ROI=(cv2.imread(argv[4],cv2.IMREAD_GRAYSCALE)<100).astype("uint8")
-        
+        ROI=(cv2.imread(argv[4],cv2.IMREAD_GRAYSCALE)<100)
+
     except:
         print("ROI NONE")
         ROI=None
@@ -33,15 +33,17 @@ def main(argv):
         result=dice.dice(mask,gtMask )
         print("*******************************************  dice: "+str(result))
     elif code==1:# Evaluate percentage of matched pixels (includes Background)
-        result=dice.equalValue(mask,gtMask,ROI)
+        result=dice.equalValue(mask.copy(),gtMask.copy(),ROI)
         print("*******************************************  % Pixels with equal value (inlcudes BKG class): "+str(result))
     elif code==2:# Evaluate percentage of TPR for each class
         for i in range(numClasses+1):
-            result=dice.RecallLabelI(gtMask.copy(),mask.copy(),i,ROI)
+            aux1=gtMask.copy()
+            aux2=mask.copy()
+            result=dice.RecallLabelI(aux1[ROI],aux2[ROI],i)
             print("******************************************* Class "+str(i)+"  Recall "+str(result))
     elif code==3:# Evaluate precision
         for i in range(numClasses+1):
-            result=dice.PrecisionLabelI(gtMask.copy(),mask.copy(),i,ROI)
+            result=dice.PrecisionLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i)
             print("******************************************* Class "+str(i)+"  Precision: "+str(result))
 
 

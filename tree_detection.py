@@ -345,7 +345,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 
 def main():
     #S00 is the background class
-    scalePercent=0.25
+    scalePercent=1
     maxSpeciesCode=9
     speciesList=["S"+'{:02d}'.format(i) for i in range(0,maxSpeciesCode+1)]
     speciesList.append("S11")

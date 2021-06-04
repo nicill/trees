@@ -14,7 +14,22 @@ from metrics import hausdorf_distance, avg_euclidean_distance
 from metrics import matched_percentage
 from utils import list_from_mask
 
-def checkGT(folder,siteName,sList):
+def fuseSpeciesList(tagFile):# Read information on how to fuse species and return it as a list and dictionary
+    speciesList=["S00"]
+    speciesDict={}
+    speciesDict["S00"]=0
+    with open(tagFile) as fp:
+        line = fp.readline()
+        while line:
+            currentLabel=line.split(" ")[0]
+            nextLabel=line.split(" ")[1].strip()
+            speciesList.append(currentLabel)
+            speciesDict[currentLabel]=int(nextLabel)
+            line = fp.readline()
+
+    return speciesList,speciesDict
+
+def checkGT(folder,siteName,sList,sDict):
     fileList=os.listdir(folder)
     #print(fileList)
 
@@ -34,7 +49,7 @@ def checkGT(folder,siteName,sList):
             currentMaskFile=folder+"/"+siteName+sList[i]+".jpg"
             currentMask=cv2.imread(currentMaskFile,cv2.IMREAD_GRAYSCALE)
             if currentMask is None: print("species "+sList[i]+" not present in site "+siteName)
-            else: mask[currentMask<150]=i #masks are black on white background
+            else: mask[currentMask<150]=sDict[sList[i]] #masks are black on white background
 
 
         # in the end, put everything outside thr ROI to background
@@ -53,6 +68,12 @@ def parse_inputs():
         dest='val_dir', # default='/home/mariano/Dropbox/DEM_Annotations',
         default='/home/mariano/Dropbox/280420',
         help='Directory containing the mosaics'
+    )
+    parser.add_argument(
+        '-labFus', '--label-fusion',
+        dest='labTab',
+        default=None,
+        help='text file with the code for classes to be fused'
     )
     parser.add_argument(
         '-e', '--epochs',
@@ -92,7 +113,7 @@ def parse_inputs():
 def find_number(string):
     return int(''.join(filter(str.isdigit, string)))
 
-def hsv_mosaics(mosaics, dems, cases):
+"""def hsv_mosaics(mosaics, dems, cases):
     # Data loading (or preparation)
     options = parse_inputs()
     d_path = options['val_dir']
@@ -106,7 +127,7 @@ def hsv_mosaics(mosaics, dems, cases):
     ]
     for mi, c_i in zip(hsv_mosaics, cases):
         cv2.imwrite(os.path.join(d_path, 'hsv_mosaic{:}.jpg'.format(c_i)), mi)
-
+"""
 
 """
 Networks
@@ -344,25 +365,31 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 
 
 def main():
-    #S00 is the background class
-    scalePercent=0.25
-    maxSpeciesCode=9
-    speciesList=["S"+'{:02d}'.format(i) for i in range(0,maxSpeciesCode+1)]
-    speciesList.append("S11")
-    speciesList.append("Other")
-
-    print(speciesList)
 
     # Init
     options = parse_inputs()
     c = color_codes()
+
+    #S00 is the background class
+    scalePercent=0.25
+    maxSpeciesCode=46
+    tagFile=options['labTab']
+    speciesDict={}
+    if tagFile is None:
+        speciesList=["S"+'{:02d}'.format(i) for i in range(0,maxSpeciesCode+1)]
+        for sp in range(len(speciesList)):speciesDict[speciesList[sp]]=sp
+    else:
+        speciesList,speciesDict=fuseSpeciesList(tagFile)
+
+    print(speciesList)
+    print(speciesDict)
 
     # Data loading (or preparation)
     d_path = options['val_dir']
     siteFolders=sorted(os.listdir(d_path))
 
     #First, create ground truth files if they do not exist
-    for x in siteFolders:checkGT(d_path+x,x,speciesList)
+    for x in siteFolders:checkGT(d_path+x,x,speciesList,speciesDict)
 
     gt_names = [d_path+"/"+x+"/"+x+"GT.png" for x in siteFolders ]
     print(gt_names)

@@ -5,7 +5,7 @@ import re
 import cv2
 import time
 import numpy as np
-#from skimage.transform import resize as imresize
+from skimage.transform import resize as imresize
 from torch.utils.data import DataLoader
 from utils import color_codes, find_file
 from datasets import Cropping2DDataset, CroppingDown2DDataset
@@ -17,17 +17,21 @@ from utils import list_from_mask
 def fuseSpeciesList(tagFile):# Read information on how to fuse species and return it as a list and dictionary
     speciesList=["S00"]
     speciesDict={}
+    inverseSpeciesDict={}
     speciesDict["S00"]=0
+    inverseSpeciesDict[0]=1
     with open(tagFile) as fp:
         line = fp.readline()
         while line:
             currentLabel=line.split(" ")[0]
             nextLabel=line.split(" ")[1].strip()
+            if nextLabel not in inverseSpeciesDict:inverseSpeciesDict[nextLabel]=1
+            else:inverseSpeciesDict[nextLabel]+=1
             speciesList.append(currentLabel)
             speciesDict[currentLabel]=int(nextLabel)
             line = fp.readline()
 
-    return speciesList,speciesDict
+    return speciesList,speciesDict,len(inverseSpeciesDict)
 
 def checkGT(folder,siteName,sList,sDict):
     fileList=os.listdir(folder)
@@ -379,10 +383,11 @@ def main():
         speciesList=["S"+'{:02d}'.format(i) for i in range(0,maxSpeciesCode+1)]
         for sp in range(len(speciesList)):speciesDict[speciesList[sp]]=sp
     else:
-        speciesList,speciesDict=fuseSpeciesList(tagFile)
+        speciesList,speciesDict,numClasses=fuseSpeciesList(tagFile)
 
     print(speciesList)
     print(speciesDict)
+    print("Number of different classes "+str(numClasses))
 
     # Data loading (or preparation)
     d_path = options['val_dir']
@@ -403,7 +408,7 @@ def main():
 
     ''' <Detection task> '''
     net_name = 'semantic-unet'
-    train(cases, gt_names, rois, net_name, len(speciesList),1,scalePercent)
+    train(cases, gt_names, rois, net_name, numClasses,1,scalePercent)
 
 
 if __name__ == '__main__':

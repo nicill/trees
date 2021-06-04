@@ -5,7 +5,7 @@ import re
 import cv2
 import time
 import numpy as np
-from skimage.transform import resize as imresize
+#from skimage.transform import resize as imresize
 from torch.utils.data import DataLoader
 from utils import color_codes, find_file
 from datasets import Cropping2DDataset, CroppingDown2DDataset
@@ -371,7 +371,7 @@ def main():
     c = color_codes()
 
     #S00 is the background class
-    scalePercent=0.25
+    scalePercent=1
     maxSpeciesCode=46
     tagFile=options['labTab']
     speciesDict={}

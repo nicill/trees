@@ -69,7 +69,7 @@ def get_slices(masks, patch_size, overlap):
 class Cropping2DDataset(Dataset):
     def __init__(
             self,
-            data, labels, rois, patch_size=32, overlap=16, filtered=False
+            data, labels, rois, patch_size=32, overlap=16, filtered=True
     ):
         # Init
         self.data = data
@@ -120,34 +120,3 @@ class Cropping2DDataset(Dataset):
 
     def __len__(self):
         return len(self.patch_slices)
-
-
-class CroppingDown2DDataset(Cropping2DDataset):
-    def __init__(
-            self,
-            data, labels, rois, patch_size=32, overlap=16, filtered=False,
-            ratio=10
-    ):
-        # Init
-        downdata = [
-            imresize(
-                im, (im.shape[0],) + tuple(
-                    [length // ratio for length in im.shape[1:]]
-                ),
-                order=2
-            )
-            for im in data
-        ]
-        downlabels = [
-            torch.max_pool2d(
-                torch.tensor(np.expand_dims(lab, 0)).type(torch.float32), ratio
-            ).squeeze(dim=0).numpy().astype(np.bool)
-            for lab in labels
-        ]
-        downrois = [
-            torch.max_pool2d(
-                torch.tensor(np.expand_dims(roi, 0)).type(torch.float32), ratio
-            ).squeeze(dim=0).numpy().astype(np.bool)
-            for roi in rois
-        ]
-        super().__init__(downdata, downlabels, downrois, patch_size, overlap, filtered)

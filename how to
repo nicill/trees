@@ -1,0 +1,3 @@
+python tree_detection.py -d /media/yago/workDrive/Experiments/forests/treeSpeciesClassification/trees/Data/Species_Classification/Data_Sarah/ -e 20 -labFus ./speciesConversionTableLuca.txt
+
+ python paintSquaresMosaic.py ./Data/Species_Classification/Data_Sarah/S1/S1.jpg ./Data/Species_Classification/Data_Sarah/S1/S1treetopsROI.png ./Data/Species_Classification/Data_Sarah/S1/S1S01.jpg ./Data/Species_Classification/Data_Sarah/S1/S1S02.jpg ./Data/Species_Classification/Data_Sarah/S1/S1S03.jpg ./Data/Species_Classification/Data_Sarah/S1/S1S04.jpg ./Data/Species_Classification/Data_Sarah/S1/S1S05.jpg

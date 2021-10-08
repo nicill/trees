@@ -8,7 +8,7 @@ import numpy as np
 from skimage.transform import resize as imresize
 from torch.utils.data import DataLoader
 from utils import color_codes, find_file
-from datasets import Cropping2DDataset, CroppingDown2DDataset
+from datasets import Cropping2DDataset
 from models import Unet2D
 from metrics import hausdorf_distance, avg_euclidean_distance
 from metrics import matched_percentage
@@ -289,20 +289,12 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
                     d_train, l_train, r_train, patch_size=patch_size, overlap=overlap,
                     filtered=True
                 )
-#                 train_dataset = CroppingDown2DDataset(
-#                     d_train, l_train, patch_size=patch_size, overlap=overlap,
-#                     filtered=True
-#                 )
 
                 print('Validation dataset (with validation)')
                 val_dataset = Cropping2DDataset(
                     d_val, l_val, r_val, patch_size=patch_size, overlap=overlap,
                     filtered=True
                 )
-#                 val_dataset = CroppingDown2DDataset(
-#                     d_val, l_val, patch_size=patch_size, overlap=overlap,
-#                     filtered=True
-#                 )
             else:
                 print('Training dataset')
                 train_dataset = Cropping2DDataset(

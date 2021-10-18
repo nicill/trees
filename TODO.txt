@@ -1,0 +1,7 @@
+Small auxiliary code to do stats on how many species there are of each existing tree class, percentage of tree tops and area (can we read all annotations consolidated into one single annotation file?)
+
+small auxiliary code that breaks the mosaic and annotation into "n" axis aligned parts with the same aspect ratio as the original.
+
+how many flights do we have? 
+
+make names so that they are easier to manage?

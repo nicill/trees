@@ -11,11 +11,23 @@ def subdivideImage(image,siteName,outputDir,subdiv):
     #print(siteName)
     #print(subdiv)
 
-    fullImage=cv2.imread(image[1])
+    if image[0]=="ROI": fullImage=cv2.imread(image[1],cv2.IMREAD_GRAYSCALE)
+    else: fullImage=cv2.imread(image[1])
 
     for i,s in enumerate(subdiv):
         dirName=outputDir+"/"+siteName+"Div"+str(i)+"/"
         newImage=fullImage[s[0]:s[1],s[2]:s[3]]
+
+        # Add a border to the roi
+        #print(newImage.shape)
+        if image[0]=="ROI":
+            border = 25
+            newImage[-border:,:]=255
+            newImage[:border,:]=255
+            newImage[:,-border:]=255
+            newImage[:,:border]=255
+
+
         newSiteName=siteName+"Div"+str(i)
         newImageName=dirName+newSiteName+image[0]+".jpg"
         #print(newImageName)
@@ -103,4 +115,3 @@ if __name__ == '__main__':
 
     for x in siteFolders:
         processSite(inputDir+x,x,speciesList,int(subdivisions/2),outDir)
-        sys.exit()

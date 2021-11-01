@@ -5,3 +5,15 @@ small auxiliary code that breaks the mosaic and annotation into "n" axis aligned
 how many flights do we have? 
 
 make names so that they are easier to manage?
+
+
+USEFUL COMMANDS:
+
+python mosaicUtils.py ~/Experiments/forests/speciesClassification/trees/Data/Data_Luca/ ~/Experiments/forests/speciesClassification/trees/Data/Data_Luca_subdivided/ 4
+
+find . -name "*mdl" -type f -delete; find . -name "*GT*" -type f -delete
+
+
+CUDA_VISIBLE_DEVICES=1;python tree_detection.py -d /home/owner/Experiments/forests/speciesClassification/trees/Data/DataAll/ -e 20 -labFus ./speciesConversionTableLuca.txt
+
+bash ./resultTester.sh /home/owner/Experiments/forests/speciesClassification/trees/Data/Data_Luca/ 1

@@ -50,20 +50,5 @@ def main(argv):
     return result
 
 
-"""
-
-    fineMask=cv2.imread(argv[3],0)
-    if fineMask is None: raise Exception("No fine mask read")
-
-    for name,mask in [("coarse",coarseMask),("fine",fineMask)]:
-
-        currentDice=dice.dice(mask,255-gtMask )
-        currentCoverPerc=dice.coveredPerc(255-gtMask,mask)
-        currentFPPerc=dice.FPPerc(255-gtMask,mask)
-        print("******************************************* "+name+" mask,  dice: "+str(currentDice)+" and covered Percentage "+str(currentCoverPerc)+" and FP perc "+str(currentFPPerc))
-"""
-
-
-
 if __name__ == '__main__':
     main(sys.argv)

@@ -3,6 +3,41 @@ from skimage.transform import resize as imresize
 import numpy as np
 import torch
 from torch.utils.data.dataset import Dataset
+from imgaug import augmenters as iaa
+
+
+def augment(image,code,verbose=True):
+    #outputFile="./fuio.jpg"
+    #print("shape!!! "+str(image.shape))
+    if code==0:
+        if verbose: print("Doing Data augmentation 0 (H fip) to image ")
+        image_aug = iaa.Rot90(1)(image=image)
+        #cv2.imwrite(outputFile,image_aug)
+    elif code==1:
+        if verbose: print("Doing Data augmentation 1 (V flip) to image ")
+        image_aug = iaa.Flipud(1.0)(image=image)
+        #cv2.imwrite(outputFile,image_aug)
+    elif code==2:
+        if verbose: print("Doing Data augmentation 2 (Gaussian Blur) to image ")
+        image_aug = iaa.GaussianBlur(sigma=(0, 0.5))(image=image)
+        #cv2.imwrite(outputFile,image_aug)
+    elif code==3:
+        if verbose: print("Doing Data augmentation 3 (rotation) to image ")
+        angle=random.randint(0,45)
+        rotate = iaa.Affine(rotate=(-angle, angle))
+        image_aug = rotate(image=image)
+        #cv2.imwrite(outputFile,image_aug)
+    elif code==4:
+        if verbose: print("Doing Data augmentation 4 (elastic) to image ")
+        image_aug = iaa.ElasticTransformation(alpha=(0, 1.0), sigma=0.1)(image=image)
+        #cv2.imwrite(outputFile,image_aug)
+    elif code==5:
+        if verbose: print("Doing Data augmentation 5 (contrast) to image ")
+        image_aug=iaa.LinearContrast((0.75, 1.5))(image=image)
+        #cv2.imwrite(outputFile,image_aug)
+    else:
+        raise Exception("datasets.py Data augmentation technique not recognised ")
+    return np.moveaxis(image_aug,-1,0)
 
 
 def centers_to_slice(voxels, patch_half):
@@ -69,7 +104,7 @@ def get_slices(masks, patch_size, overlap):
 class Cropping2DDataset(Dataset):
     def __init__(
             self,
-            data, labels, rois, numLabels,patch_size=32, overlap=16
+            data, labels, rois, numLabels,important=[], unimportant=[],augment=0,decrease=0,patch_size=32, overlap=16
     ):
         # Init
         self.data = data
@@ -91,8 +126,6 @@ class Cropping2DDataset(Dataset):
             self.rois, self.patch_size, self.overlap
         )
 
-        print(slices.shape)
-
         # Filter out patches completely outside the ROI
         self.patch_slices = [
             (s, i) for i, (roi, slices_i) in enumerate(zip(self.rois, slices))
@@ -100,17 +133,88 @@ class Cropping2DDataset(Dataset):
         ]
 
         # Now traverse all real patches and count how many pixels of each class there are inside the ROI
-        #self.max_slice = np.cumsum(list(map(len, self.patch_slices)))
-
-        #for i in range(self.max_slice[-1]):
-        #    print("accessing "+str(i))
-        #    input,targ=self.accessRaw(i)
-            #im=targ
-            #roi=input[1]
-            #im[roi>150]=-1
+        for i in range(len(self.patch_slices)):
+            input,targ=self.accessRaw(i)
+            im=targ
+            roi=input[1]
+            im[roi>150]=-1
             # now count each pixel of each class inside the patch and the ROI
-            #for i in range(numLabels):self.labelStats[i][1]+=np.sum(im==i)
-        #print(self.labelStats)
+            for i in range(numLabels):self.labelStats[i][1]+=np.sum(im==i)
+
+        #compute percentages
+        totalRelevantPixels=0
+        for c,pix,zero in self.labelStats: totalRelevantPixels+=pix
+        for x in self.labelStats: x[2]=100*x[1]/totalRelevantPixels
+
+        #now we know how many pixels are in the relevant classes
+        #now create a list of indices and
+        # now perform data augmentation, go over the whole dataset
+        # ignore patches with no labels!
+        # for the patches from interesting classes, make a note to later make augmentFactor copies
+        self.AugmDict={}
+        self.realCount=0
+        #uncount=0
+        for i in range(len(self.patch_slices)):
+            im,targ=self.accessRaw(i)
+            #if 1 in targ:# at least some label present
+            if patchWithClasses(targ):# at least some label present
+                if (not uninterestingPatch(targ,self.uninteresting)) or random.randint(0,99)>self.downSampleUninterestingPercentage:#random draw
+                    self.AugmDict[self.realCount]=i
+                    self.realCount+=1
+                    if uninterestingPatch(targ,self.uninteresting):self.countUninteresting+=1
+
+                #else:
+                #    print("ignoring unimportant patch "+str(uncount))
+                #    uncount+=1
+
+        print("now go to augment, real "+str(self.realCount)+" there were "+str(self.max_slice[-1])+" augment factor "+str(augmentFactor))
+
+        if augment:
+            augmCount=self.realCount
+            for i in range(self.realCount):
+                im,targDouble=self[i]
+                targ=targDouble[0]
+                # targ is a list of probabilities if the patch belongs to the class at that position
+                patchToAugment=False
+                superInterestingPatch=True
+                labelsInPatch=0
+                j=0
+                while j<self.numLabels:
+                    #print("targ "+str(targ[j]))
+                    #if targ[j]==1 and j in self.interesting:
+                    if targ[j]!=0 and j in self.interesting:
+                       patchToAugment=True
+                       labelsInPatch+=1
+                    #elif targ[j]==1:
+                    elif targ[j]!=0:
+                        labelsInPatch+=1
+                        superInterestingPatch=False
+                    j+=1
+
+                #if superInterestingPatch, double the augment factor
+                if superInterestingPatch and (labelsInPatch!=0):
+                    self.countInteresting+=1
+                    #print("super interesting!!! "+str(targ)+" labels in patch "+str(labelsInPatch)+" "+str((labelsInPatch!=0)) )
+                    for k in range(2*augmentFactor):
+                        self.countInteresting+=1
+                        self.AugmDict[augmCount]=i
+                        augmCount+=1
+                elif patchToAugment: #if not superinteresting but contains interesting, augment with the normal augment factor
+                    self.countInteresting+=1
+                    for k in range(augmentFactor):
+                        self.countInteresting+=1
+                        self.AugmDict[augmCount]=i
+                        augmCount+=1
+
+
+        print("FINISHED CREATING DATASET!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        #print(self.AugmDict)
+        self.len=len(self.AugmDict)
+        print("length was "+str(self.realCount)+" and will become "+str(self.len)+" interesting patches made "+str(100*self.countInteresting/self.realCount)+" uninteresting patches left "+str(100*self.countUninteresting/self.realCount))
+
+
+
+
 
 
     def accessRaw(self, index):

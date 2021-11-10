@@ -22,29 +22,35 @@ def main(argv):
     numClasses=11
 
     try:
-        ROI=(cv2.imread(argv[4],cv2.IMREAD_GRAYSCALE)<100)
-
-    except:
-        print("ROI NONE")
+        if code==0: ROI=(cv2.imread(argv[4],cv2.IMREAD_GRAYSCALE)<100).astype("uint8")
+        else:ROI=(cv2.imread(argv[4],cv2.IMREAD_GRAYSCALE)<100)
+    except Exception as e:
+        print("ROI NONE "+argv[4]+" "+str(e))
         ROI=None
 
+
+    #erase anything outside the ROI!!!!
+    gtMask[ROI==0]=0
+    mask[ROI==0]=0
+
     result=-1
-    if code==0:# Evaluate Dice coefficient
-        result=dice.dice(mask,gtMask )
-        print("*******************************************  dice: "+str(result))
-    elif code==1:# Evaluate percentage of matched pixels (includes Background)
+    if code==0: # Evaluate percentage of matched pixels (includes Background)
         result=dice.equalValue(mask.copy(),gtMask.copy(),ROI)
         print("*******************************************  % Pixels with equal value (inlcudes BKG class): "+str(result))
-    elif code==2:# Evaluate percentage of TPR for each class
+    elif code==1:# Evaluate percentage of TPR for each class
         for i in range(numClasses+1):
             aux1=gtMask.copy()
             aux2=mask.copy()
             result=dice.RecallLabelI(aux1[ROI],aux2[ROI],i)
             print("******************************************* Class "+str(i)+"  Recall "+str(result))
-    elif code==3:# Evaluate precision
+    elif code==2:# Evaluate precision for each class
         for i in range(numClasses+1):
             result=dice.PrecisionLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i)
             print("******************************************* Class "+str(i)+"  Precision: "+str(result))
+    elif code==3:# Evaluate Dice for each class
+        for i in range(numClasses+1):
+            result=dice.DiceLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i)
+            print("******************************************* Class "+str(i)+"  Dice: "+str(result))
 
 
     return result

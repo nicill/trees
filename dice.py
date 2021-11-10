@@ -25,24 +25,28 @@ def FPPerc(gtMask,predictedMask):
     FP=np.sum(auxMask == 255)
     return FP/total
 
-def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the same value
+def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the same value, the first mask is the result and the second the GT
 
     try:
-        totalPixels=np.sum(ROI!=0)
+        aux=mask1.copy()
+        aux[ROI==0]=0
+        totalPixels=np.sum(ROI!=0)-np.sum(aux==255)
         #print("total Pixels in ROI "+str(totalPixels))
-    except:
-        raise Exception("NO ROI")
+    except Exception as e:
+        raise Exception("NO ROI"+str(e))
         #totalPixels=mask1.shape[0]*mask1.shape[1]
 
     im=mask1-mask2 # subtract masks to find out equal pixels
 
     im[ROI==0]=255
     im[im!=0]=255
-    #cv2.imwrite("sampulla.png",im)
 
     #print(np.sum(im == 0))
 
     return np.sum(im == 0)/totalPixels
+
+
+
 
 #recall, how many positives did we catch
 def RecallLabelI(gt,predicted,i):# return the percentage of pixels of class i correctly matched over the total of positives
@@ -57,6 +61,16 @@ def PrecisionLabelI(gt,predicted,i):# return the percentage of pixels of class i
     FP=np.sum(np.logical_and(gt != i, predicted == i))
     if (TP+FP)!=0 : return TP/(TP+FP)
     else: return 0
+
+def DiceLabelI(gt,predicted,i):# return the percentage of pixels of class i incorrectly matched over the total of positives
+
+    TP=np.sum(np.logical_and(gt == i, predicted == i))
+    FP=np.sum(np.logical_and(gt != i, predicted == i))
+    FN=np.sum(np.logical_and(gt == i, predicted != i))
+    #2TP/(2TP+FP+FN)
+    if ((2*TP)+FP+FN)!=0 : return 2*TP/((2*TP)+FP+FN)
+    else: return 0
+
 
 def dice(im1, im2, empty_score=1.0):
     """

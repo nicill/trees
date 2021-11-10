@@ -155,7 +155,7 @@ class Unet2D(BaseModel):
         # Since we are dealing with a binary problem, there is no need to use
         # softmax.
         seg = torch.softmax(self.seg(input_s), dim=1)
-        
+
         if mask is None:
             return seg
         else:
@@ -241,7 +241,7 @@ class Unet2D(BaseModel):
                     )
                     print('\033[K', end='', flush=True)
                     print(batch_s, end='\r', flush=True)
-                    
+
                 seg_i[counts_i > 0] = seg_i[counts_i > 0] / counts_i[counts_i > 0]
 
             else:

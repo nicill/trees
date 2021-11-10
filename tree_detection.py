@@ -117,22 +117,6 @@ def parse_inputs():
 def find_number(string):
     return int(''.join(filter(str.isdigit, string)))
 
-"""def hsv_mosaics(mosaics, dems, cases):
-    # Data loading (or preparation)
-    options = parse_inputs()
-    d_path = options['val_dir']
-
-    hsv_mosaics = [
-        cv2.cvtColor(mosaic, cv2.COLOR_BGR2HSV) for mosaic in mosaics
-    ]
-    hsv_mosaics = [
-        np.stack([mosaic[..., 0], mosaic[..., 1], dem[..., 0]], -1)
-        for mosaic, dem in zip(hsv_mosaics, dems)
-    ]
-    for mi, c_i in zip(hsv_mosaics, cases):
-        cv2.imwrite(os.path.join(d_path, 'hsv_mosaic{:}.jpg'.format(c_i)), mi)
-"""
-
 """
 Networks
 """
@@ -148,6 +132,12 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 
     print("reading GT ")
     print(gt_names)
+
+#TODO DO BETTER!!!!!!!
+    codedImportant=[4,5,6] #actively increase
+    codedUnImportant=[0] #actively decrease
+    augment=8
+    decrease=0.2
 
     y=[]
     counter=0
@@ -286,22 +276,22 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 
                 print('Training dataset (with validation)')
                 train_dataset = Cropping2DDataset(
-                    d_train, l_train, r_train, numLabels=nClasses, patch_size=patch_size, overlap=overlap
+                    d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, patch_size=patch_size, overlap=overlap
                 )
 
                 print('Validation dataset (with validation)')
                 val_dataset = Cropping2DDataset(
-                    d_val, l_val, r_val, numLabels=nClasses, patch_size=patch_size, overlap=overlap
+                    d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, patch_size=patch_size, overlap=overlap
                 )
             else:
                 print('Training dataset')
                 train_dataset = Cropping2DDataset(
-                    train_x, train_y, train_roi, numLabels=nClasses,  patch_size=patch_size, overlap=overlap
+                    train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,  patch_size=patch_size, overlap=overlap
                 )
 
                 print('Validation dataset')
                 val_dataset = Cropping2DDataset(
-                    train_x, train_y, train_roi, numLabels=nClasses, patch_size=patch_size, overlap=overlap
+                    train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, patch_size=patch_size, overlap=overlap
                 )
 
             train_dataloader = DataLoader(
@@ -334,6 +324,11 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
             )
         yi = net.test([test_x])
         pred_y = np.argmax(yi[0], axis=0)
+        heatMap_y = np.max(yi[0], axis=0)
+
+        #now exclude classes with probability under the thershold
+        probTH=0.5
+        pred_y[heatMap_y<probTH]=255
 
         if resampleF!=1:
             cv2.imwrite(case[:-4]+"Result.png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))

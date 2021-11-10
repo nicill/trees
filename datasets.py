@@ -69,13 +69,18 @@ def get_slices(masks, patch_size, overlap):
 class Cropping2DDataset(Dataset):
     def __init__(
             self,
-            data, labels, rois, patch_size=32, overlap=16, filtered=True
+            data, labels, rois, numLabels,patch_size=32, overlap=16
     ):
         # Init
         self.data = data
         self.labels = labels
         self.rois = rois
         data_shape = self.data[0].shape
+
+        # create a list of pixels by label
+        self.labelStats=[]
+        for i in range(numLabels):self.labelStats.append([i,0,0])
+        #print(self.labelStats)
 
         if type(patch_size) is not tuple:
             patch_size = (patch_size,) * len(data_shape)
@@ -85,15 +90,51 @@ class Cropping2DDataset(Dataset):
         slices = get_slices(
             self.rois, self.patch_size, self.overlap
         )
-        if filtered:
-            self.patch_slices = [
-                (s, i) for i, (roi, slices_i) in enumerate(zip(self.rois, slices))
-                for s in slices_i if np.sum(roi[s]) > 0
-            ]
-        else:
-            self.patch_slices = [
-                (s, i) for i, slices_i in enumerate(slices) for s in slices_i
-            ]
+
+        print(slices.shape)
+
+        # Filter out patches completely outside the ROI
+        self.patch_slices = [
+            (s, i) for i, (roi, slices_i) in enumerate(zip(self.rois, slices))
+            for s in slices_i if np.sum(roi[s]) > 0
+        ]
+
+        # Now traverse all real patches and count how many pixels of each class there are inside the ROI
+        #self.max_slice = np.cumsum(list(map(len, self.patch_slices)))
+
+        #for i in range(self.max_slice[-1]):
+        #    print("accessing "+str(i))
+        #    input,targ=self.accessRaw(i)
+            #im=targ
+            #roi=input[1]
+            #im[roi>150]=-1
+            # now count each pixel of each class inside the patch and the ROI
+            #for i in range(numLabels):self.labelStats[i][1]+=np.sum(im==i)
+        #print(self.labelStats)
+
+
+    def accessRaw(self, index):
+        # We select the case
+        slice_i, case_idx = self.patch_slices[index]
+
+        # We get the slice indexes
+        none_slice = (slice(None, None),)
+
+        inputs = (
+            self.data[case_idx][none_slice + slice_i].astype(np.float32),
+            np.expand_dims(
+                self.rois[case_idx][slice_i].astype(np.uint8), axis=0
+            )
+        )
+
+        target = np.expand_dims(
+            self.labels[case_idx][slice_i].astype(np.uint8), axis=0
+        )
+
+        # target_labs = bwlabeln(target.astype(np.bool))
+        # tops = len(np.unique(target_labs[target.astype(np.bool)]))
+
+        return inputs, target
 
     def __getitem__(self, index):
         # We select the case

@@ -136,7 +136,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 #TODO DO BETTER!!!!!!!
     codedImportant=[4,5,6] #actively increase
     codedUnImportant=[0] #actively decrease
-    augment=8
+    augment=3
     decrease=0.2
 
     y=[]
@@ -276,22 +276,22 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 
                 print('Training dataset (with validation)')
                 train_dataset = Cropping2DDataset(
-                    d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, patch_size=patch_size, overlap=overlap
+                    d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
                 )
 
                 print('Validation dataset (with validation)')
                 val_dataset = Cropping2DDataset(
-                    d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, patch_size=patch_size, overlap=overlap
+                    d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
                 )
             else:
                 print('Training dataset')
                 train_dataset = Cropping2DDataset(
-                    train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,  patch_size=patch_size, overlap=overlap
+                    train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease,  patch_size=patch_size, overlap=overlap
                 )
 
                 print('Validation dataset')
                 val_dataset = Cropping2DDataset(
-                    train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, patch_size=patch_size, overlap=overlap
+                    train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
                 )
 
             train_dataloader = DataLoader(

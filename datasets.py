@@ -4,40 +4,64 @@ import numpy as np
 import torch
 from torch.utils.data.dataset import Dataset
 from imgaug import augmenters as iaa
+import random
+import cv2
 
 
-def augment(image,code,verbose=True):
+def augment(imageInit,roiInit,labelsInit,code,verbose=True):
     #outputFile="./fuio.jpg"
     #print("shape!!! "+str(image.shape))
+    image=np.moveaxis(imageInit,0,-1)
+    roi=np.moveaxis(roiInit,0,-1)
+    labels=np.moveaxis(labelsInit,0,-1)
+
     if code==0:
         if verbose: print("Doing Data augmentation 0 (H fip) to image ")
         image_aug = iaa.Rot90(1)(image=image)
+        #roi_aug = roi
+        #labels_aug = labels
+        roi_aug = iaa.Rot90(1)(image=roi)
+        labels_aug = iaa.Rot90(1)(image=labels)
         #cv2.imwrite(outputFile,image_aug)
     elif code==1:
         if verbose: print("Doing Data augmentation 1 (V flip) to image ")
         image_aug = iaa.Flipud(1.0)(image=image)
+        roi_aug = iaa.Flipud(1.0)(image=roi)
+        labels_aug = iaa.Flipud(1.0)(image=labels)
         #cv2.imwrite(outputFile,image_aug)
     elif code==2:
         if verbose: print("Doing Data augmentation 2 (Gaussian Blur) to image ")
         image_aug = iaa.GaussianBlur(sigma=(0, 0.5))(image=image)
+        roi_aug = roi
+        labels_aug = labels
         #cv2.imwrite(outputFile,image_aug)
     elif code==3:
         if verbose: print("Doing Data augmentation 3 (rotation) to image ")
         angle=random.randint(0,45)
         rotate = iaa.Affine(rotate=(-angle, angle))
+        rotateRoi=iaa.Affine(rotate=(-angle, angle),order=0)
         image_aug = rotate(image=image)
+        roi_aug= rotateRoi(image=roi)
+        labels_aug=rotateRoi(image=labels)
         #cv2.imwrite(outputFile,image_aug)
     elif code==4:
-        if verbose: print("Doing Data augmentation 4 (elastic) to image ")
-        image_aug = iaa.ElasticTransformation(alpha=(0, 1.0), sigma=0.1)(image=image)
-        #cv2.imwrite(outputFile,image_aug)
-    elif code==5:
         if verbose: print("Doing Data augmentation 5 (contrast) to image ")
         image_aug=iaa.LinearContrast((0.75, 1.5))(image=image)
+        roi_aug = roi
+        labels_aug = labels
+        #cv2.imwrite(outputFile,image_aug)
+    elif code==5:
+        if verbose: print("Doing Data augmentation 4 (elastic) to image ")
+        image_aug = iaa.ElasticTransformation(alpha=(0, 1.0), sigma=0.1)(image=image)
+        roi_aug = iaa.ElasticTransformation(alpha=(0, 1.0), sigma=0.1,order=0)(image=roi)
+        labels_aug = iaa.ElasticTransformation(alpha=(0, 1.0), sigma=0.1,order=0)(image=labels)
+
         #cv2.imwrite(outputFile,image_aug)
     else:
         raise Exception("datasets.py Data augmentation technique not recognised ")
-    return np.moveaxis(image_aug,-1,0)
+
+    return (np.ascontiguousarray(np.moveaxis(image_aug,-1,0)),np.ascontiguousarray(np.moveaxis(roi_aug,-1,0))),np.ascontiguousarray(np.moveaxis(labels_aug,-1,0))
+
 
 
 def centers_to_slice(voxels, patch_half):
@@ -100,6 +124,16 @@ def get_slices(masks, patch_size, overlap):
 
     return patch_slices
 
+def classesPresent(th,labIm):
+    labelsPresent=[]
+    for label in np.unique(labIm.astype(np.uint8)):
+        if label!=-1:
+            imSize=labIm.shape[0]*labIm.shape[1]
+            pixTot=np.sum(labIm.astype(np.uint8)==label)
+            pixRatio=(pixTot)/imSize
+            #print("label "+str(label)+" had "+str(pixRatio))
+            if pixRatio>th:labelsPresent.append(label)
+    return labelsPresent
 
 class Cropping2DDataset(Dataset):
     def __init__(
@@ -111,6 +145,10 @@ class Cropping2DDataset(Dataset):
         self.labels = labels
         self.rois = rois
         data_shape = self.data[0].shape
+        self.presenceThreshold=0.1
+        self.numAugmentations=6
+
+        #cv2.imwrite("./mosaic.jpg",np.moveaxis(self.data[0],0,-1))
 
         # create a list of pixels by label
         self.labelStats=[]
@@ -131,6 +169,7 @@ class Cropping2DDataset(Dataset):
             (s, i) for i, (roi, slices_i) in enumerate(zip(self.rois, slices))
             for s in slices_i if np.sum(roi[s]) > 0
         ]
+        self.len=len(self.patch_slices)
 
         # Now traverse all real patches and count how many pixels of each class there are inside the ROI
         for i in range(len(self.patch_slices)):
@@ -147,78 +186,44 @@ class Cropping2DDataset(Dataset):
         for x in self.labelStats: x[2]=100*x[1]/totalRelevantPixels
 
         #now we know how many pixels are in the relevant classes
-        #now create a list of indices and
         # now perform data augmentation, go over the whole dataset
-        # ignore patches with no labels!
-        # for the patches from interesting classes, make a note to later make augmentFactor copies
-        self.AugmDict={}
-        self.realCount=0
-        #uncount=0
+        # For every patch, the classes present are those with more than 10% of pixels
+        # For patches with important classes present, augment
+        # for the other patches
+        # If they contain uninteresting classes, decrease
+        # if not, leave the patch alone
+        self.AugmList=[] # make a note of the real patch that corresponds to the index
+
         for i in range(len(self.patch_slices)):
-            im,targ=self.accessRaw(i)
-            #if 1 in targ:# at least some label present
-            if patchWithClasses(targ):# at least some label present
-                if (not uninterestingPatch(targ,self.uninteresting)) or random.randint(0,99)>self.downSampleUninterestingPercentage:#random draw
-                    self.AugmDict[self.realCount]=i
-                    self.realCount+=1
-                    if uninterestingPatch(targ,self.uninteresting):self.countUninteresting+=1
+            input,targ=self.accessRaw(i)
+            roi=input[1]
+            targ[roi>150]=-1
 
-                #else:
-                #    print("ignoring unimportant patch "+str(uncount))
-                #    uncount+=1
+            classesInPatch=classesPresent(self.presenceThreshold,targ)
+            #print(classesInPatch)
+            #print(str(important)+" "+str(any(i in classesInPatch for i in important)))
+            #print(str(unimportant)+" "+str(any(i in classesInPatch for i in unimportant)))
+            if any(i in classesInPatch for i in important):# patch contains some important classes
+                #print("important")
+                if augment>0:
+                    for j in range(augment):self.AugmList.append((i,j))
+                else:self.AugmList.append((i,0))
+            elif any(i in classesInPatch for i in unimportant) and random.random()<decrease: # no important classes on patch, but unimportant classes present
+                #print("*******************unimportant")
+                pass # patch needs to be reduced
+            else: #no important or unimportant classes, keep patch as is
+                #print("meh")
 
-        print("now go to augment, real "+str(self.realCount)+" there were "+str(self.max_slice[-1])+" augment factor "+str(augmentFactor))
+                self.AugmList.append((i,0))
 
-        if augment:
-            augmCount=self.realCount
-            for i in range(self.realCount):
-                im,targDouble=self[i]
-                targ=targDouble[0]
-                # targ is a list of probabilities if the patch belongs to the class at that position
-                patchToAugment=False
-                superInterestingPatch=True
-                labelsInPatch=0
-                j=0
-                while j<self.numLabels:
-                    #print("targ "+str(targ[j]))
-                    #if targ[j]==1 and j in self.interesting:
-                    if targ[j]!=0 and j in self.interesting:
-                       patchToAugment=True
-                       labelsInPatch+=1
-                    #elif targ[j]==1:
-                    elif targ[j]!=0:
-                        labelsInPatch+=1
-                        superInterestingPatch=False
-                    j+=1
-
-                #if superInterestingPatch, double the augment factor
-                if superInterestingPatch and (labelsInPatch!=0):
-                    self.countInteresting+=1
-                    #print("super interesting!!! "+str(targ)+" labels in patch "+str(labelsInPatch)+" "+str((labelsInPatch!=0)) )
-                    for k in range(2*augmentFactor):
-                        self.countInteresting+=1
-                        self.AugmDict[augmCount]=i
-                        augmCount+=1
-                elif patchToAugment: #if not superinteresting but contains interesting, augment with the normal augment factor
-                    self.countInteresting+=1
-                    for k in range(augmentFactor):
-                        self.countInteresting+=1
-                        self.AugmDict[augmCount]=i
-                        augmCount+=1
-
-
-        print("FINISHED CREATING DATASET!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        #print("FINISHED CREATING DATASET!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"+str(self.AugmList))
         #print(self.AugmDict)
-        self.len=len(self.AugmDict)
-        print("length was "+str(self.realCount)+" and will become "+str(self.len)+" interesting patches made "+str(100*self.countInteresting/self.realCount)+" uninteresting patches left "+str(100*self.countUninteresting/self.realCount))
-
-
-
-
-
+        self.len=len(self.AugmList)
+        print("length was "+str(len(self.patch_slices))+" and will become "+str(self.len))
 
     def accessRaw(self, index):
         # We select the case
+        #print("*******************accessing "+str(index)+" of "+str(self.len))
         slice_i, case_idx = self.patch_slices[index]
 
         # We get the slice indexes
@@ -241,27 +246,19 @@ class Cropping2DDataset(Dataset):
         return inputs, target
 
     def __getitem__(self, index):
-        # We select the case
-        slice_i, case_idx = self.patch_slices[index]
-
-        # We get the slice indexes
-        none_slice = (slice(None, None),)
-
-        inputs = (
-            self.data[case_idx][none_slice + slice_i].astype(np.float32),
-            np.expand_dims(
-                self.rois[case_idx][slice_i].astype(np.uint8), axis=0
-            )
-        )
-
-        target = np.expand_dims(
-            self.labels[case_idx][slice_i].astype(np.uint8), axis=0
-        )
-
-        # target_labs = bwlabeln(target.astype(np.bool))
-        # tops = len(np.unique(target_labs[target.astype(np.bool)]))
-
-        return inputs, target
+        #return self.accessRaw(index)
+        #print("GETITEM         "+str(index)+" of "+str(self.len))
+        if self.AugmList[index][1]==0:
+        #    print("raw")
+            return self.accessRaw(self.AugmList[index][0])
+        else:
+        #    print("COOKED")
+            input,targ=self.accessRaw(self.AugmList[index][0])
+            im=input[0]
+            roi=input[1]
+            transf=random.randint(0, self.numAugmentations-1)
+            return augment(im,roi,targ,transf,False)
 
     def __len__(self):
-        return len(self.patch_slices)
+        return self.len
+        #return len(self.patch_slices)

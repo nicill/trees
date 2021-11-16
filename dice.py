@@ -25,12 +25,20 @@ def FPPerc(gtMask,predictedMask):
     FP=np.sum(auxMask == 255)
     return FP/total
 
+def decidedPercentage(mask1,mask2, ROI=None):# return the percentage of pixels with the same value, the first mask is the result and the second the GT
+    aux=mask1.copy()
+    aux[ROI==0]=0
+    totalPixels=np.sum(ROI!=0)-np.sum(aux==255)
+    return 100*totalPixels/np.sum(ROI!=0)
+
 def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the same value, the first mask is the result and the second the GT
 
     try:
         aux=mask1.copy()
         aux[ROI==0]=0
         totalPixels=np.sum(ROI!=0)-np.sum(aux==255)
+        #totalPixels=np.sum(ROI!=0)
+        #print("decided Percentage: "+str(100*totalPixels/np.sum(ROI!=0)))
         #print("total Pixels in ROI "+str(totalPixels))
     except Exception as e:
         raise Exception("NO ROI"+str(e))

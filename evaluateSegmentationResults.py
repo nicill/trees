@@ -34,24 +34,33 @@ def main(argv):
     mask[ROI==0]=0
 
     result=-1
-    if code==0: # Evaluate percentage of matched pixels (includes Background)
+    if code==0: # Percentage of decided Pixels
+        result=dice.decidedPercentage(mask.copy(),gtMask.copy(),ROI)
+    elif code==1: # Evaluate percentage of matched pixels (includes Background but not undecided pixels)
         result=dice.equalValue(mask.copy(),gtMask.copy(),ROI)
-        print("*******************************************  % Pixels with equal value (inlcudes BKG class): "+str(result))
-    elif code==1:# Evaluate percentage of TPR for each class
+        #print("*******************************************  % Pixels with equal value (inlcudes BKG class): "+str(result))
+    elif code==2:# Evaluate percentage of TPR for each class
+        result=[]
         for i in range(numClasses+1):
             aux1=gtMask.copy()
             aux2=mask.copy()
-            result=dice.RecallLabelI(aux1[ROI],aux2[ROI],i)
-            print("******************************************* Class "+str(i)+"  Recall "+str(result))
-    elif code==2:# Evaluate precision for each class
+            result.append(dice.RecallLabelI(aux1[ROI],aux2[ROI],i))
+            #print("******************************************* Class "+str(i)+"  Recall "+str(result))
+    elif code==3:# Evaluate precision for each class
+        result=[]
         for i in range(numClasses+1):
-            result=dice.PrecisionLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i)
-            print("******************************************* Class "+str(i)+"  Precision: "+str(result))
-    elif code==3:# Evaluate Dice for each class
+            result.append(dice.PrecisionLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
+            #print("******************************************* Class "+str(i)+"  Precision: "+str(result))
+    elif code==4:# Evaluate Dice for each class
+        result=[]
         for i in range(numClasses+1):
-            result=dice.DiceLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i)
-            print("******************************************* Class "+str(i)+"  Dice: "+str(result))
+            result.append(dice.DiceLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
+            #print("******************************************* Class "+str(i)+"  Dice: "+str(result))
 
+    if isinstance(result,list):
+        for x in result:print(str(x)+str(" "),end="")
+        print("")
+    else:print(result)
 
     return result
 

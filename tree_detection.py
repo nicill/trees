@@ -86,6 +86,24 @@ def parse_inputs():
         help='Number of epochs'
     )
     parser.add_argument(
+        '-aug', '--augment',
+        dest='augment',
+        type=int,  default=0,
+        help='augmentations per image'
+    )
+    parser.add_argument(
+        '-dec', '--decrease',
+        dest='decrease',
+        type=int,  default=0,
+        help='decreasing percentage per 100 images'
+    )
+    parser.add_argument(
+        '-th', '--threshold',
+        dest='threshold',
+        type=int,  default=0,
+        help='minumin threshold over 100 to consider a pixel decided'
+    )
+    parser.add_argument(
         '-p', '--patience',
         dest='patience',
         type=int, default=5,
@@ -136,8 +154,9 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
 #TODO DO BETTER!!!!!!!
     codedImportant=[4,5,6] #actively increase
     codedUnImportant=[0] #actively decrease
-    augment=3
-    decrease=0.2
+    augment=parse_inputs()['augment']
+    decreaseRead=parse_inputs()['decrease']
+    decrease=decreaseRead/100.
 
     y=[]
     counter=0
@@ -240,7 +259,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
         num_workers = 1
 
         #model_name = '{:}.unc.mosaic{:}.mdl'.format(net_name, case)
-        model_name = case[:-4]+"unc.mosaic"+net_name+".mdl"
+        model_name = case[:-4]+"unc.mosaic"+net_name+"augm"+str(augment)+"decrease"+str(decreaseRead)+".mdl"
         net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
 
         print("MODEL NAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -327,17 +346,18 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
         heatMap_y = np.max(yi[0], axis=0)
 
         #now exclude classes with probability under the thershold
-        probTH=0.5
+        thRead=parse_inputs()['threshold']
+        probTH=thRead/100.
         pred_y[heatMap_y<probTH]=255
 
         if resampleF!=1:
-            cv2.imwrite(case[:-4]+"Result.png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))
-            cv2.imwrite(case[:-4]+"ResultSMALL.png",
+            cv2.imwrite(case[:-4]+"ResultTH"+str(thRead)+".png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))
+            cv2.imwrite(case[:-4]+"ResultTH"+str(thRead)+"SMALL.png",
                 (pred_y).astype(np.uint8)
             )
 
         else:
-            cv2.imwrite(case[:-4]+"Result.png",
+            cv2.imwrite(case[:-4]+"ResultTH"+str(thRead)+".png",
                 (pred_y).astype(np.uint8)
             )
 

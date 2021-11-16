@@ -184,6 +184,7 @@ class Cropping2DDataset(Dataset):
         totalRelevantPixels=0
         for c,pix,zero in self.labelStats: totalRelevantPixels+=pix
         for x in self.labelStats: x[2]=100*x[1]/totalRelevantPixels
+        print("STATS! "+str(self.labelStats))
 
         #now we know how many pixels are in the relevant classes
         # now perform data augmentation, go over the whole dataset

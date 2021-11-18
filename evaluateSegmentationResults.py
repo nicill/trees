@@ -59,8 +59,8 @@ def main(argv):
 
     if isinstance(result,list):
         for x in result:print(str(x)+str(" "),end="")
-        print("")
-    else:print(result)
+        #print("")
+    else:print(str(result)+" ",end="")
 
     return result
 

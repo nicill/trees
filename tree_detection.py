@@ -351,15 +351,16 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
         pred_y[heatMap_y<probTH]=255
 
         if resampleF!=1:
-            cv2.imwrite(case[:-4]+"ResultTH"+str(thRead)+".png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))
-            cv2.imwrite(case[:-4]+"ResultTH"+str(thRead)+"SMALL.png",
+            cv2.imwrite(case[:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))
+            cv2.imwrite(case[:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+"SMALL.png",
                 (pred_y).astype(np.uint8)
             )
 
         else:
-            cv2.imwrite(case[:-4]+"ResultTH"+str(thRead)+".png",
+            cv2.imwrite(case[:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",
                 (pred_y).astype(np.uint8)
             )
+        print("Results FILE!!!!!!!!!!!!!!!!!!!!! "+str(case[:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png"))
 
     if verbose > 0:
         time_str = time.strftime(

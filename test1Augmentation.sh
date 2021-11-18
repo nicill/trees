@@ -3,8 +3,37 @@
 #CUDA_VISIBLE_DEVICES=2;python tree_detection.py -d /home/owner/Experiments/forests/speciesClassification/trees/Data/Data_Luca_subdivided/ -e 20 -labFus ./speciesConversionTableLuca.txt -aug 6 -dec 30 -th 70
 GPU=$1
 dataDir=$2
-conversion=./speciesConversionTableLuca.txt
+whatToDo=$3
+prefix=$4
+
 softDir=$(pwd)
+conversion=$softDir/speciesConversionTableLuca.txt
+outDir=$softDir/output/
+codeString="0 1"
+
+
+for code in $codeString
+do
+	touch  $outDir"Criterion"$code"pref"$prefix".txt"
+	echo "AUGMENT DECREASE THRESHOLD LISTOFSITES " >> $outDir"Criterion"$code"pref"$prefix".txt"
+done
+
+# Codify the actions that the script will perform
+evaluate=0
+compute=0
+shutdown=0
+
+if [[ $whatToDo == *"c"* ]]; then
+compute=1
+fi
+if [[ $whatToDo == *"e"* ]]; then
+evaluate=1
+fi
+if [[ $whatToDo == *"s"* ]]; then
+shutdown=1
+fi
+
+
 
 #try for different augmentations and decreases
 for a in 0 2 4 5 8 10 20
@@ -15,26 +44,35 @@ do
     do
         echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^starting $a $d $th"
         date
-        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -d $dataDir -e 20 -labFus $conversion -aug $a -dec $d -th $th
+	if [[ $compute = 1 ]];then
+	        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -d $dataDir -e 20 -labFus $conversion -aug $a -dec $d -th $th
+	fi
+	if [[ $evaluate = 1 ]];then
+
+	
+		cd $dataDir
+		for code in $codeString
+		do
+			echo -n	"$a $d $th ">> $outDir"Criterion"$code"pref"$prefix".txt"
+
+			for f in *;
+			do
+			    if [ -d "$f" ]; then
+				echo " $f is a directory"
+					python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $dataDir/$f/$f"augm"$a"decrease"$d"ResultTH"$th".png" $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix".txt"
+			    fi
+			done
+			echo " " >> $outDir"Criterion"$code"pref"$prefix".txt"
+		done
+	fi	
     done
+	
   done
 done
 
-#exit()
 
-#code=$2
-#th=$3
+if [[ $shutdown = 1 ]];then
+shutdown
+fi
 
-#make a file for every output (decided perc, accuracy, classwise(prec,rec,dice) )
 
-#echo " $dataDir"
-
-#cd $dataDir
-
-#for f in *;
-#do
-#    if [ -d "$f" ]; then
-	#echo " $f is a directory"
-#	python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $dataDir/$f/$f"ResultTH"$th".png" $code $dataDir/$f/$f"ROI.jpg"
-#    fi
-#done

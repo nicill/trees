@@ -59,7 +59,12 @@ do
 			do
 			    if [ -d "$f" ]; then
 				echo " $f is a directory"
-					python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $dataDir/$f/$f"augm"$a"decrease"$d"ResultTH"$th".png" $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix".txt"
+					outFile=$dataDir/$f/$f"augm"$a"decrease"$d"ResultTH"$th".png"
+	  			        if [ -f "$outFile" ]; then
+						echo " $outFile exists"
+	  			        
+						python $softDir/evaluateSegmentationResults.py $outFile $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix".txt"
+					fi
 			    fi
 			done
 			echo " " >> $outDir"Criterion"$code"pref"$prefix".txt"

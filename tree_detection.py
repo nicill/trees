@@ -183,7 +183,7 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
 
 #TODO DO BETTER!!!!!!!
     codedImportant=[4,5,6] #actively increase
-    codedUnImportant=[0] #actively decrease
+    codedUnImportant=[0,1,2,3] #actively decrease
     augment=parse_inputs()['augment']
     decreaseRead=parse_inputs()['decrease']
     decrease=decreaseRead/100.

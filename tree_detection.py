@@ -277,6 +277,7 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
         )
     )
     training_start = time.time()
+    print(cases)
     for i, case in enumerate(cases):
         if verbose > 0:
             print(
@@ -303,8 +304,8 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
         overlap = (32, 32)
         num_workers = 1
 
-        #model_name = '{:}.unc.mosaic{:}.mdl'.format(net_name, case)
-        model_name = case[i][:-4]+"unc.mosaic"+net_name+"augm"+str(augment)+"decrease"+str(decreaseRead)+".mdl"
+        # We only store one model in case there are multiple flights
+        model_name = case[0][:-4]+"unc.mosaic"+net_name+"augm"+str(augment)+"decrease"+str(decreaseRead)+".mdl"
         net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
 
         print("MODEL NAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")

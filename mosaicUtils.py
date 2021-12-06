@@ -15,8 +15,13 @@ def subdivideImage(image,siteName,outputDir,subdiv):
     else: fullImage=cv2.imread(image[1])
 
     for i,s in enumerate(subdiv):
-        dirName=outputDir+"/"+siteName+"Div"+str(i)+"/"
+
+        newSiteName=siteName[0:3]+"Div"+str(i)+siteName[3:]
+        #print("making "+newSiteName)
+
+        dirName=outputDir+"/"+newSiteName+"/"
         newImage=fullImage[s[0]:s[1],s[2]:s[3]]
+        newImageName=dirName+newSiteName+image[0]+".jpg"
 
         # Add a border to the roi
         #print(newImage.shape)
@@ -27,9 +32,6 @@ def subdivideImage(image,siteName,outputDir,subdiv):
             newImage[:,-border:]=255
             newImage[:,:border]=255
 
-
-        newSiteName=siteName+"Div"+str(i)
-        newImageName=dirName+newSiteName+image[0]+".jpg"
         #print(newImageName)
         cv2.imwrite(newImageName,newImage)
 
@@ -83,7 +85,8 @@ def processSite(folder,siteName,spList,nSteps,outFolder):
 
     #print(imagesToSubdivide)
     for i,s in enumerate(subdiv):
-        dirName=outFolder+"/"+siteName+"Div"+str(i)+"/"
+        newSiteName=siteName[0:3]+"Div"+str(i)+siteName[3:]
+        dirName=outFolder+"/"+newSiteName+"/"
         #print("should be making dir "+dirName)
         try:
             # Create target Directory
@@ -94,6 +97,8 @@ def processSite(folder,siteName,spList,nSteps,outFolder):
 
 
     for image in imagesToSubdivide:
+        #print("shit")
+        #print(image)
         subdivideImage(image,siteName,outFolder,subdiv)
 
 if __name__ == '__main__':

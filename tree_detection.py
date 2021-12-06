@@ -14,6 +14,29 @@ from metrics import hausdorf_distance, avg_euclidean_distance
 from metrics import matched_percentage
 from utils import list_from_mask
 
+def toSingleList(aListOfLists,excludedIndex):
+    returnList=[]
+    for i in range(len(aListOfLists)):
+        if i!=excludedIndex:
+            for x in aListOfLists[i]:returnList.append(x)
+    return returnList
+
+def toListOfLists(aList,indexDict):
+    returnList=[]
+    for k,v in indexDict.items():
+        returnList.append([aList[i] for i in v])
+    return returnList
+
+def tellApartSitesFromMosaics(folders):
+    myDict={"S"+x.split("S")[1]:[] for x in folders}
+    i=0
+    for x in folders:
+        myDict["S"+x.split("S")[1]].append(i)
+        i+=1
+
+    #print(myDict)
+    return myDict
+
 def fuseSpeciesList(tagFile):# Read information on how to fuse species and return it as a list and dictionary
     speciesList=["S00"]
     speciesDict={}
@@ -135,10 +158,17 @@ def parse_inputs():
 def find_number(string):
     return int(''.join(filter(str.isdigit, string)))
 
+def invertIndicesDict(sitesIndicesDict):
+    returnDict={}
+    for k,v in sitesIndicesDict.items():
+        for x in v:
+            if x not in returnDict:returnDict[x]=k
+    return returnDict
+
 """
 Networks
 """
-def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=1):
+def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, verbose=1,resampleF=1):
     # Init
     print("\n\n\n\n STARTING TRAIN  ")
     options = parse_inputs()
@@ -214,6 +244,8 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
         originalSizes.append((nowIm.shape[1],nowIm.shape[0]))
 
     #print(mosaics)
+    #print("LETs make lists of lists with "+str(dictSitesMosaics))
+
     x = [
          np.moveaxis(mosaic, -1, 0)
         for mosaic in mosaics
@@ -226,6 +258,17 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
         (xi - meani.reshape((-1, 1, 1))) / stdi.reshape((-1, 1, 1))
         for xi, meani, stdi in zip(x, mean_x, std_x)
     ]
+
+    # create also a list of testIndices divided by sites
+    #indices=[i for i in range(len(x))]
+    #indices=toListOfLists(indices,dictSitesMosaics)
+    x=toListOfLists(x,dictSitesMosaics)
+    mean_x=toListOfLists(mean_x,dictSitesMosaics)
+    std_x=toListOfLists(std_x,dictSitesMosaics)
+    norm_x=toListOfLists(norm_x,dictSitesMosaics)
+    y=toListOfLists(y,dictSitesMosaics)
+    rois=toListOfLists(rois,dictSitesMosaics)
+    cases=toListOfLists(cases,dictSitesMosaics)
 
     print(
         '%s[%s] %sStarting cross-validation (leave-one-mosaic-out)'
@@ -244,11 +287,13 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
                     c['c'], i + 1, len(cases), c['nc']
                 )
             )
-        test_x = norm_x[i]
 
-        train_y = y[:i] + y[i + 1:]
-        train_roi = rois[:i] + rois[i + 1:]
-        train_x = norm_x[:i] + norm_x[i + 1:]
+        test_x = norm_x[i]#test_x is now a list!!!!!!!!!!!!!!!!!!!!!
+        #create an inverse dictionary!
+        #dictMosaicsSites=invertIndicesDict(dictSitesMosaics)
+        train_y = toSingleList(y,i)
+        train_roi = toSingleList(rois,i)
+        train_x = toSingleList(norm_x,i)
 
         val_split = 0.1
         batch_size = 8
@@ -259,7 +304,7 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
         num_workers = 1
 
         #model_name = '{:}.unc.mosaic{:}.mdl'.format(net_name, case)
-        model_name = case[:-4]+"unc.mosaic"+net_name+"augm"+str(augment)+"decrease"+str(decreaseRead)+".mdl"
+        model_name = case[i][:-4]+"unc.mosaic"+net_name+"augm"+str(augment)+"decrease"+str(decreaseRead)+".mdl"
         net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
 
         print("MODEL NAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -341,26 +386,28 @@ def train(cases, gt_names, roiNames, net_name, nClasses=47, verbose=1,resampleF=
                     c['c'], i + 1, len(cases), c['nc']
                 )
             )
-        yi = net.test([test_x])
-        pred_y = np.argmax(yi[0], axis=0)
-        heatMap_y = np.max(yi[0], axis=0)
 
-        #now exclude classes with probability under the thershold
-        thRead=parse_inputs()['threshold']
-        probTH=thRead/100.
-        pred_y[heatMap_y<probTH]=255
+        for ind in range(len(test_x)):
+            yi = net.test([test_x[ind]])
+            pred_y = np.argmax(yi[0], axis=0)
+            heatMap_y = np.max(yi[0], axis=0)
 
-        if resampleF!=1:
-            cv2.imwrite(case[:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))
-            cv2.imwrite(case[:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+"SMALL.png",
-                (pred_y).astype(np.uint8)
-            )
+            #now exclude classes with probability under the thershold
+            thRead=parse_inputs()['threshold']
+            probTH=thRead/100.
+            pred_y[heatMap_y<probTH]=255
 
-        else:
-            cv2.imwrite(case[:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",
-                (pred_y).astype(np.uint8)
-            )
-        print("Results FILE!!!!!!!!!!!!!!!!!!!!! "+str(case[:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png"))
+            if resampleF!=1:
+                cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))
+                cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+"SMALL.png",
+                    (pred_y).astype(np.uint8)
+                )
+
+            else:
+                cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",
+                    (pred_y).astype(np.uint8)
+                )
+            print("Results FILE!!!!!!!!!!!!!!!!!!!!! "+str(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png"))
 
     if verbose > 0:
         time_str = time.strftime(
@@ -401,6 +448,8 @@ def main():
     #First, create ground truth files if they do not exist
     for x in siteFolders:checkGT(d_path+x,x,speciesList,speciesDict)
 
+    #also return a dictionary of sites and their mosaics (indices in cases?)
+
     gt_names = [d_path+"/"+x+"/"+x+"GT.png" for x in siteFolders ]
     print(gt_names)
 
@@ -411,9 +460,12 @@ def main():
     print("\n\n")
     print(rois)
 
+    dictSitesMosaics=tellApartSitesFromMosaics(siteFolders)
+    print(dictSitesMosaics)
+
     ''' <Detection task> '''
     net_name = 'semantic-unet'
-    train(cases, gt_names, rois, net_name, numClasses,1,scalePercent)
+    train(cases, gt_names, rois, net_name,dictSitesMosaics , numClasses,1,scalePercent)
 
 
 if __name__ == '__main__':

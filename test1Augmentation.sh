@@ -62,8 +62,7 @@ do
 					outFile=$dataDir/$f/$f"augm"$a"decrease"$d"ResultTH"$th".png"
 	  			        if [ -f "$outFile" ]; then
 						echo " $outFile exists"
-	  			        
-						python $softDir/evaluateSegmentationResults.py $outFile $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix".txt"
+						python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $outFile $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix".txt"
 					fi
 			    fi
 			done

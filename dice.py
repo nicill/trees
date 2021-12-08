@@ -15,7 +15,8 @@ def coveredPerc(gtMask,predictedMask):
     covered=np.sum(auxMask == 255)
     #print("total covered gt pixels "+str(covered))
 
-    return 1-(covered/total)
+    if total!=0: return 1-(covered/total)
+    else: return 0
 
 def FPPerc(gtMask,predictedMask):
     #first, compute initial GT pixels
@@ -23,13 +24,15 @@ def FPPerc(gtMask,predictedMask):
     auxMask=predictedMask.copy()
     auxMask[gtMask==255]=0
     FP=np.sum(auxMask == 255)
-    return FP/total
+    if total!=0: return FP/total
+    else: return 0
 
 def decidedPercentage(mask1,mask2, ROI=None):# return the percentage of pixels with the same value, the first mask is the result and the second the GT
     aux=mask1.copy()
     aux[ROI==0]=0
     totalPixels=np.sum(ROI!=0)-np.sum(aux==255)
-    return 100*totalPixels/np.sum(ROI!=0)
+    if np.sum(ROI!=0)!=0:return 100*totalPixels/np.sum(ROI!=0)
+    else: return 0
 
 def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the same value, the first mask is the result and the second the GT
 
@@ -51,7 +54,8 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
 
     #print(np.sum(im == 0))
 
-    return np.sum(im == 0)/totalPixels
+    if totalPixels!=0: return np.sum(im == 0)/totalPixels
+    else: return 0
 
 
 

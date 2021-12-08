@@ -197,24 +197,11 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
         if resampleF!=1:
             image= np.argmax([cv2.resize((image==i).astype("uint8"), (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),interpolation=cv2.INTER_LINEAR) for i in range(nClasses) ], axis=0)
 
-            #resizedList=[]
-            #for i in range(nClasses):
-            #    toResize=(image==i).astype("uint8")
-            #    resizedList.append(cv2.resize(toResize, (int(image.shape[0]*resampleF),int(image.shape[1]*resampleF)),interpolation=cv2.INTER_LINEAR))
-            #image=np.argmax(resizedList)
-            #cv2.imwrite("gt"+str(counter)+".png",image)
-
         counter+=1
-        #y.append((np.mean(image,axis=-1)< 50).astype(np.uint8))
         y.append(image.astype(np.uint8))
 
     #Print Unique values
     for yi in y: print(np.unique(yi))
-
-    #y = [(np.mean(cv2.imread(im),axis=-1)< 50).astype(np.uint8)for im in gt_names]
-
-    #print(y)
-
 
     if resampleF!=1:
         mosaics = []
@@ -232,7 +219,6 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
             rois.append( (cv2.resize(image, (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),
             interpolation=cv2.INTER_LINEAR) < 100).astype(np.uint8) )
             #cv2.imwrite("ROI"+str(counter)+".png",rois[-1])
-
             counter+=1
     else:
         mosaics = [cv2.imread(c_i) for c_i in cases]
@@ -260,8 +246,10 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
     ]
 
     # create also a list of testIndices divided by sites
-    #indices=[i for i in range(len(x))]
-    #indices=toListOfLists(indices,dictSitesMosaics)
+    indices=[i for i in range(len(x))]
+    indices=toListOfLists(indices,dictSitesMosaics)
+    #print("indices starting")
+    #print(indices)
     x=toListOfLists(x,dictSitesMosaics)
     mean_x=toListOfLists(mean_x,dictSitesMosaics)
     std_x=toListOfLists(std_x,dictSitesMosaics)
@@ -295,6 +283,7 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
         train_y = toSingleList(y,i)
         train_roi = toSingleList(rois,i)
         train_x = toSingleList(norm_x,i)
+        print("indices train "+str(toSingleList(indices,i)))
 
         val_split = 0.1
         batch_size = 8
@@ -306,7 +295,9 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
 
         # We only store one model in case there are multiple flights
         model_name = case[0][:-4]+"unc.mosaic"+net_name+"augm"+str(augment)+"decrease"+str(decreaseRead)+".mdl"
-        net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
+        #net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
+        # NO ENTENC GAIRE PERQUE FUNCIONA!!!!!
+        net = Unet2D(n_inputs=len(norm_x[0][0]),n_outputs=nClasses)
 
         print("MODEL NAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         print(model_name)
@@ -349,6 +340,8 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
                     d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
                 )
             else:
+                raise Exception("NOT DOING THIS!")
+                """
                 print('Training dataset')
                 train_dataset = Cropping2DDataset(
                     train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease,  patch_size=patch_size, overlap=overlap
@@ -358,6 +351,7 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
                 val_dataset = Cropping2DDataset(
                     train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
                 )
+                """
 
             train_dataloader = DataLoader(
                 train_dataset, batch_size, True, num_workers=num_workers

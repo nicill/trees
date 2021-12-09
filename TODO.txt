@@ -1,10 +1,8 @@
-Small auxiliary code to do stats on how many species there are of each existing tree class, percentage of tree tops and area (can we read all annotations consolidated into one single annotation file?)
+Follow floor by detecting small values of the DEM.
 
-small auxiliary code that breaks the mosaic and annotation into "n" axis aligned parts with the same aspect ratio as the original.
+Given a prediction of the floor, in every window, find the floor 90th percentile and everything at that altitude is floor.
 
-how many flights do we have? 
-
-make names so that they are easier to manage?
+eliminate small regions, isolated points.
 
 
 USEFUL COMMANDS:

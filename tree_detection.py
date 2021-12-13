@@ -190,8 +190,8 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
 #TODO DO BETTER!!!!!!!
     #Unet 1
     codedImportant=[4,5,6] #actively increase
-    codedUnImportant=[1,2,3] #actively decrease
-    codedIgnore=[0]
+    codedUnImportant=[0,1,2,3] #actively decrease
+    codedIgnore=[]
     #Unet2
     useSecondNet=bool(options["u2"])
     if useSecondNet:
@@ -321,13 +321,16 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
         #net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
         # NO ENTENC GAIRE PERQUE FUNCIONA!!!!!
         net = Unet2D(n_inputs=len(norm_x[0][0]),n_outputs=nClasses)
-        if useSecondNet: net2 = Unet2D(n_inputs=len(norm_x[0][0]),n_outputs=nClasses)
+        if useSecondNet:
+            net2 = Unet2D(n_inputs=len(norm_x[0][0]),n_outputs=nClasses)
+            print("2nd MODEL NAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(model_name2)
+        else: print("NOT USING SECOND UNET")
 
-        print("MODEL NAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print(model_name)
 
         try:
             net.load_model( model_name)
+            if useSecondNet:net.load_model( model_name2)
         except IOError:
 
             # Dataloader creation
@@ -415,11 +418,12 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
             )
 
             if useSecondNet:
-                net2.fit(
-                train_dataloader2,
-                val_dataloader2,
-                epochs=epochs,
-                patience=patience,
+                    print("TRAINING SECOND MODEL!!!!!!!!!!!!")
+                    net2.fit(
+                    train_dataloader2,
+                    val_dataloader2,
+                    epochs=epochs,
+                    patience=patience,
             )
 
 

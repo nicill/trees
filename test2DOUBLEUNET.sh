@@ -40,12 +40,12 @@ for a in 0 2 4 5 8 10
 do
   for d in 0 10 50 70
   do
-    for th in 0 50 90
+    for th in 25 50 90
     do
         echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^starting $a $d $th"
         date
 	if [[ $compute = 1 ]];then
-	        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -d $dataDir -e 20 -labFus $conversion -aug $a -dec $d -th $th
+	        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -d $dataDir -e 20 -labFus $conversion -aug $a -dec $d -th $th -u2 True
 	fi
 	if [[ $evaluate = 1 ]];then
 

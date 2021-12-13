@@ -138,7 +138,7 @@ def classesPresent(th,labIm):
 class Cropping2DDataset(Dataset):
     def __init__(
             self,
-            data, labels, rois, numLabels,important=[], unimportant=[],augment=0,decrease=0,patch_size=32, overlap=16
+            data, labels, rois, numLabels,important=[], unimportant=[], ignore=[], augment=0,decrease=0,patch_size=32, overlap=16
     ):
         # Init
         self.data = data
@@ -192,6 +192,7 @@ class Cropping2DDataset(Dataset):
         # For patches with important classes present, augment
         # for the other patches
         # If they contain uninteresting classes, decrease
+        # If they contain classes to ignore, eliminate patch
         # if not, leave the patch alone
         self.AugmList=[] # make a note of the real patch that corresponds to the index
 
@@ -205,13 +206,17 @@ class Cropping2DDataset(Dataset):
             #print(str(important)+" "+str(any(i in classesInPatch for i in important)))
             #print(str(unimportant)+" "+str(any(i in classesInPatch for i in unimportant)))
             if any(i in classesInPatch for i in important):# patch contains some important classes
-                #print("important")
+                #print("important "+str(classesInPatch))
                 if augment>0:
                     for j in range(augment):self.AugmList.append((i,j))
                 else:self.AugmList.append((i,0))
             elif any(i in classesInPatch for i in unimportant) and random.random()<decrease: # no important classes on patch, but unimportant classes present
-                #print("*******************unimportant")
+                #print("*******************unimportant to be decreased "+str(classesInPatch))
                 pass # patch needs to be reduced
+
+            elif all(i in ignore for i in classesInPatch) : # all classes in the patch are ignore classes
+                #print("*******************ignoring "+str(classesInPatch)+" classes to Ignore "+str(ignore))
+                pass
             else: #no important or unimportant classes, keep patch as is
                 #print("meh")
 

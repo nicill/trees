@@ -60,18 +60,51 @@ def demThresholdMask(dem,threshold):
     returnImage[dem>=minDem+threshold]=0
     return returnImage
 
+def expandMaskAroundFloor(mask,dem,wSize,th):
+    #move a sliding window
+    for (x, y, window) in sliding_window(dem, stepSize=wSize, windowSize=(wSize, wSize)):
+        # for nonempty windows
+        if window[np.nonzero(window)].any():
+             # consider the top "non spurious" floor altitude in the window
+             maskWindow=mask[y:y + wSize, x:x + wSize]
+             if maskWindow[np.nonzero(maskWindow)].any():
+                 floorMarker=np.percentile(window[maskWindow==255],90)
+                 print("marker at "+str(floorMarker)+" max at "+str(np.max(dem))+" expanding to "+str((floorMarker+th)))
+                 #Now expand the floor
+                 maskWindow[window<(floorMarker+th)]=255
+                 maskWindow[window==0]=0
+
+
+def storePretty(mask, name):
+    max=np.max(mask)
+    mask=mask*(int(255/max))
+    cv2.imwrite(name,mask)
+
+def demtoJPG(dem,fileName):
+    aux=dem.copy()
+    dem=dem-np.min(dem[np.nonzero(dem)])
+    dem[aux==0]=0
+    cv2.imwrite(fileName,dem.astype("int"))
+
 if __name__ == '__main__':
 
     # Read a DEM file and a results mask
     demFile=sys.argv[1]
-    predLabelsFile=sys.argv[2]
+    roiFile=sys.argv[2]
 
     dem=readDEM(demFile)
+    roi=cv2.imread(roiFile,cv2.IMREAD_GRAYSCALE)
+    if roi is None:raise Exception("NO ROI found in site "+roiFile+"")
 
-    th=[0.3,0.25,0.2,0.1]
-    w=[5,2,5,10]
+    #ignore anything outside of the ROI
+    dem[roi==255]=0
+    #demtoJPG(dem,"demjpg.jpg")
+
+    th=[0.1,0.25,0.2,0.1]
+    w=[1,2,5,10]
     wsizes=[250,500,750,1000]
     totalMask=np.zeros((dem.shape[0],dem.shape[1]))
+
 
     for i,wsize in enumerate(wsizes):
         mask=np.zeros((dem.shape[0],dem.shape[1]))
@@ -79,5 +112,17 @@ if __name__ == '__main__':
         mask[dem==0]=0
         totalMask=w[i]*mask+totalMask
     max=np.max(totalMask)
-    totalMask=totalMask*(int(255/max))
-    cv2.imwrite("papa.jpg",totalMask)
+    storePretty(totalMask,"pap.jpg")
+
+    #totalMask=cv2.imread("pap.jpg",0)
+    max=np.max(totalMask)
+    print(max)
+    print(int(0.9*max))
+    maskToExpand=totalMask.copy()
+    maskToExpand[totalMask<int(0.9*max)]=0
+    maskToExpand[maskToExpand!=0]=255
+
+    storePretty(maskToExpand,"pep.jpg")
+
+    expandMaskAroundFloor(maskToExpand,dem,500,10)
+    storePretty(maskToExpand,"pop.jpg")

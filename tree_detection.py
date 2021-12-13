@@ -149,6 +149,11 @@ def parse_inputs():
         dest='lab_tag', default='top',
         help='Tag to be found on all the ground truth filenames'
     )
+    parser.add_argument(
+        '-u2', '--unet2',
+        dest='u2', default=False,
+        help='whether or not we use a second unet'
+    )
 
     options = vars(parser.parse_args())
 
@@ -172,6 +177,7 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
     # Init
     print("\n\n\n\n STARTING TRAIN  ")
     options = parse_inputs()
+
     d_path = options['val_dir']
     c = color_codes()
     n_folds = len(gt_names)
@@ -182,8 +188,21 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
     print(gt_names)
 
 #TODO DO BETTER!!!!!!!
+    #Unet 1
     codedImportant=[4,5,6] #actively increase
-    codedUnImportant=[0,1,2,3] #actively decrease
+    codedUnImportant=[1,2,3] #actively decrease
+    codedIgnore=[0]
+    #Unet2
+    useSecondNet=bool(options["u2"])
+    if useSecondNet:
+        important2=[4,5,6]
+        unimportant2=[]
+        ignore2=[0,1,2,3]
+
+    # Add a unet2 parameter, if it is present, define new training/validation dataset with the important2, unimportant2,ignore2 lists.
+    # define and train a second unet based on those dataloaders,
+    # for the pixels where the first unet is undecided, call the second unet
+
     augment=parse_inputs()['augment']
     decreaseRead=parse_inputs()['decrease']
     decrease=decreaseRead/100.
@@ -295,9 +314,14 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
 
         # We only store one model in case there are multiple flights
         model_name = case[0][:-4]+"unc.mosaic"+net_name+"augm"+str(augment)+"decrease"+str(decreaseRead)+".mdl"
+        print("MODEL NAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print(model_name)
+        if useSecondNet:model_name2 = case[0][:-4]+"unc.mosaic"+net_name+"augm"+str(augment)+"decrease"+str(decreaseRead)+"SECOND.mdl"
+
         #net = Unet2D(n_inputs=len(norm_x[0]),n_outputs=nClasses)
         # NO ENTENC GAIRE PERQUE FUNCIONA!!!!!
         net = Unet2D(n_inputs=len(norm_x[0][0]),n_outputs=nClasses)
+        if useSecondNet: net2 = Unet2D(n_inputs=len(norm_x[0][0]),n_outputs=nClasses)
 
         print("MODEL NAME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         print(model_name)
@@ -330,15 +354,26 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
                 r_train = train_roi[:n_t_samples]
                 r_val = train_roi[n_t_samples:]
 
-                print('Training dataset (with validation)')
+                print('Training datasets (with validation)')
                 train_dataset = Cropping2DDataset(
-                    d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+                    d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
                 )
 
-                print('Validation dataset (with validation)')
+
+                print('Validation datasets (with validation)')
                 val_dataset = Cropping2DDataset(
-                    d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+                    d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
                 )
+
+                if useSecondNet:
+                    train_dataset2 = Cropping2DDataset(
+                    d_train, l_train, r_train, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+                )
+                    val_dataset2 = Cropping2DDataset(
+                    d_val, l_val, r_val, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+                )
+
+
             else:
                 raise Exception("NOT DOING THIS!")
                 """
@@ -360,6 +395,15 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
                 val_dataset, batch_size, num_workers=num_workers
             )
 
+            if useSecondNet:
+                train_dataloader2 = DataLoader(
+                train_dataset2, batch_size, True, num_workers=num_workers
+            )
+                val_dataloader2 = DataLoader(
+                val_dataset2, batch_size, num_workers=num_workers
+            )
+
+
             epochs = parse_inputs()['epochs']
             patience = parse_inputs()['patience']
 
@@ -370,7 +414,17 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
                 patience=patience,
             )
 
+            if useSecondNet:
+                net2.fit(
+                train_dataloader2,
+                val_dataloader2,
+                epochs=epochs,
+                patience=patience,
+            )
+
+
             net.save_model( model_name)
+            if useSecondNet:net2.save_model( model_name2)
 
         if verbose > 0:
             print(
@@ -391,6 +445,15 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
             thRead=parse_inputs()['threshold']
             probTH=thRead/100.
             pred_y[heatMap_y<probTH]=255
+
+            # now reclassify usingn second Unet
+            if useSecondNet:
+                yi2 = net2.test([test_x[ind]])
+                pred_y2 = np.argmax(yi2[0], axis=0)
+                #heatMap_y = np.max(yi[0], axis=0)
+                pred_y[heatMap_y==255]=0
+                pred_y2[heatMap_y!=255]=0
+                pred_y=pred_y+pred_y2
 
             if resampleF!=1:
                 cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))

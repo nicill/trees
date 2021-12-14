@@ -54,19 +54,23 @@ do
 		for code in $codeString
 		do
 			echo -n	"$a $d $th ">> $outDir"Criterion"$code"pref"$prefix".txt"
+			echo -n	"$a $d $th ">> $outDir"Criterion"$code"pref"$prefix"ONE.txt"
 
 			for f in *;
 			do
 			    if [ -d "$f" ]; then
 				echo " $f is a directory"
 					outFile=$dataDir/$f/$f"augm"$a"decrease"$d"ResultTH"$th".png"
+					outFile2=$dataDir/$f/$f"augm"$a"decrease"$d"ResultTH"$th"ONE.png"
 	  			        if [ -f "$outFile" ]; then
 						echo " $outFile exists"
 						python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $outFile $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix".txt"
+						python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $outFile2 $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix"ONE.txt"
 					fi
 			    fi
 			done
 			echo " " >> $outDir"Criterion"$code"pref"$prefix".txt"
+			echo " " >> $outDir"Criterion"$code"pref"$prefix"ONE.txt"
 		done
 	fi	
     done

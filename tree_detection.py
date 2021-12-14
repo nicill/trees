@@ -450,6 +450,7 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
             probTH=thRead/100.
             pred_y[heatMap_y<probTH]=255
 
+            pred_z=pred_y.copy()
             # now reclassify usingn second Unet
             if useSecondNet:
 
@@ -470,6 +471,9 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
             else:
                 cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",
                     (pred_y).astype(np.uint8)
+                )
+                cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+"ONE.png",
+                    (pred_z).astype(np.uint8)
                 )
             print("Results FILE!!!!!!!!!!!!!!!!!!!!! "+str(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png"))
 

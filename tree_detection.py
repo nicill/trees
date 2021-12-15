@@ -205,7 +205,7 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
 
     # fix augment and decrease for experiment2
     augmentUnet1=2
-    decreaseUnet1=70
+    decreaseUnet1=0.7
 
     augment=parse_inputs()['augment']
     decreaseRead=parse_inputs()['decrease']

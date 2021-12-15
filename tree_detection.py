@@ -196,12 +196,16 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
     useSecondNet=bool(options["u2"])
     if useSecondNet:
         important2=[4,5,6]
-        unimportant2=[]
-        ignore2=[0,1,2,3]
+        unimportant2=[1,2,3]
+        ignore2=[0]
 
     # Add a unet2 parameter, if it is present, define new training/validation dataset with the important2, unimportant2,ignore2 lists.
     # define and train a second unet based on those dataloaders,
     # for the pixels where the first unet is undecided, call the second unet
+
+    # fix augment and decrease for experiment2
+    augmentUnet1=2
+    decreaseUnet1=70
 
     augment=parse_inputs()['augment']
     decreaseRead=parse_inputs()['decrease']
@@ -359,13 +363,13 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
 
                 print('Training datasets (with validation)')
                 train_dataset = Cropping2DDataset(
-                    d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+                    d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augmentUnet1,decrease=decreaseUnet1, patch_size=patch_size, overlap=overlap
                 )
 
 
                 print('Validation datasets (with validation)')
                 val_dataset = Cropping2DDataset(
-                    d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+                    d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augmentUnet1,decrease=decreaseUnet1, patch_size=patch_size, overlap=overlap
                 )
 
                 if useSecondNet:

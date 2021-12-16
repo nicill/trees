@@ -35,10 +35,11 @@ def decidedPercentage(mask1,mask2, ROI=None):# return the percentage of pixels w
     else: return 0
 
 def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the same value, the first mask is the result and the second the GT
-
     try:
+        # the ROI has 1 inside 0 outside
         aux=mask1.copy()
         aux[ROI==0]=0
+        #compute equal value only in decided pixels
         totalPixels=np.sum(ROI!=0)-np.sum(aux==255)
         #totalPixels=np.sum(ROI!=0)
         #print("decided Percentage: "+str(100*totalPixels/np.sum(ROI!=0)))
@@ -49,6 +50,7 @@ def equalValue(mask1,mask2, ROI=None):# return the percentage of pixels with the
 
     im=mask1-mask2 # subtract masks to find out equal pixels
 
+    #consider only inside the roi
     im[ROI==0]=255
     im[im!=0]=255
 
@@ -79,6 +81,14 @@ def DiceLabelI(gt,predicted,i):# return the percentage of pixels of class i inco
     #2TP/(2TP+FP+FN)
     if ((2*TP)+FP+FN)!=0 : return 2*TP/((2*TP)+FP+FN)
     else: return 0
+
+def CorrectLabelI(gt,predicted,i):# return the percentage of pixels of class i correctly predicted
+
+    TP=np.sum(np.logical_and(gt == i, predicted == i))
+    #FP=np.sum(np.logical_and(gt != i, predicted == i))
+    #FN=np.sum(np.logical_and(gt == i, predicted != i))
+    #2TP/(2TP+FP+FN)
+    return TP
 
 
 def dice(im1, im2, empty_score=1.0):

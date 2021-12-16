@@ -460,11 +460,13 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
 
                 yi2 = net2.test([test_x[ind]])
                 pred_y2 = np.argmax(yi2[0], axis=0)
+                heatMap_y2 = np.max(yi2[0], axis=0)
+
                 # NOW, Keep the high probability results from the first unet
-                pred_y[heatMap_y<probTH]=pred_y2[heatMap_y<probTH]
-                # and for the rest, use the second unet
-                #pred_y2[heatMap_y>=probTH]=0
-                #pred_y=pred_y+pred_y2
+                #pred_y[heatMap_y<probTH]=pred_y2[heatMap_y<probTH]
+
+                # Keep the results with higher probability
+                pred_y[heatMap_y<heatMap_y2]=pred_y2[heatMap_y<heatMap_y2]
 
             if resampleF!=1:
                 cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))

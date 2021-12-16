@@ -219,7 +219,6 @@ class Cropping2DDataset(Dataset):
                 pass
             else: #no important or unimportant classes, keep patch as is
                 #print("meh")
-
                 self.AugmList.append((i,0))
 
         #print("FINISHED CREATING DATASET!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"+str(self.AugmList))

@@ -6,7 +6,6 @@ import cv2
 
 def main(argv):
 
-
     gtMask=cv2.imread(argv[1],cv2.IMREAD_GRAYSCALE).astype("uint8")
     if gtMask is None: raise Exception("No ground Truth mask read")
 
@@ -17,9 +16,9 @@ def main(argv):
 
     #print(np.unique(mask))
 
-
     code=int(argv[3])
-    numClasses=11
+    numClasses=6 #this is the number of the bigger
+    #class present (classes 0-numClasses both included)
 
     try:
         if code==0: ROI=(cv2.imread(argv[4],cv2.IMREAD_GRAYSCALE)<100).astype("uint8")
@@ -27,7 +26,6 @@ def main(argv):
     except Exception as e:
         print("ROI NONE "+argv[4]+" "+str(e))
         ROI=None
-
 
     #erase anything outside the ROI!!!!
     gtMask[ROI==0]=0
@@ -56,6 +54,17 @@ def main(argv):
         for i in range(numClasses+1):
             result.append(dice.DiceLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
             #print("******************************************* Class "+str(i)+"  Dice: "+str(result))
+    elif code==5:# Evaluate correctly class in each class
+        mask[ROI==0]=255
+
+        result=[]
+        for i in range(numClasses+1):
+            result.append(dice.CorrectLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
+    elif code==6:# Evaluate correctly class in each class
+
+        result=[]
+        for i in range(numClasses+1):
+            result.append(dice.totalLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
 
     if isinstance(result,list):
         for x in result:print(str(x)+str(" "),end="")

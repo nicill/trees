@@ -452,9 +452,10 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
             #now exclude classes with probability under the thershold
             thRead=parse_inputs()['threshold']
             probTH=thRead/100.
-            pred_y[heatMap_y<probTH]=255
 
             pred_z=pred_y.copy()
+            pred_z[heatMap_y<probTH]=255
+
             # now reclassify usingn second Unet
             if useSecondNet:
 
@@ -466,6 +467,7 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
                 #pred_y[heatMap_y<probTH]=pred_y2[heatMap_y<probTH]
 
                 # Keep the results with higher probability
+
                 pred_y[heatMap_y<heatMap_y2]=pred_y2[heatMap_y<heatMap_y2]
 
             if resampleF!=1:

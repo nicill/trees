@@ -36,11 +36,11 @@ fi
 
 
 #try for different augmentations and decreases
-for a in 0 2 4 5 8 10 20
+for a in 0 2 5 10 20 25 50 75
 do
-  for d in 0 10 50 70 90
+  for d in 0 10 15 25 50 90
   do
-    for th in 25 50 75 90
+    for th in 25 50
     do
         echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^starting $a $d $th"
         date

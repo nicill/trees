@@ -154,6 +154,43 @@ def parse_inputs():
         dest='u2', default=False,
         help='whether or not we use a second unet'
     )
+    parser.add_argument(
+        '-imp1', '--important-u1',
+        dest='impu1',
+        default=None,
+        help='Important classes for unet1'
+    )
+    parser.add_argument(
+        '-unimp1', '--unimportant-u1',
+        dest='unimpu1',
+        default=None,
+        help='Unimportant classes for unet1'
+    )
+    parser.add_argument(
+        '-ign1', '--ignore-u1',
+        dest='ign1',
+        default=None,
+        help='classes to ignore for unet1'
+    )
+    parser.add_argument(
+        '-imp2', '--important-u2',
+        dest='impu2',
+        default=None,
+        help='Important classes for unet2'
+    )
+    parser.add_argument(
+        '-unimp2', '--unimportant-u2',
+        dest='unimpu2',
+        default=None,
+        help='Unimportant classes for unet2'
+    )
+    parser.add_argument(
+        '-ign2', '--ignore-u2',
+        dest='ign2',
+        default=None,
+        help='classes to ignore for unet2'
+    )
+
 
     options = vars(parser.parse_args())
 
@@ -169,6 +206,10 @@ def invertIndicesDict(sitesIndicesDict):
         for x in v:
             if x not in returnDict:returnDict[x]=k
     return returnDict
+
+def extractClasses(classString):
+    #the classes will be separated by "c"
+    return [int(x) for x in classString.split("c")[1:] ]
 
 """
 Networks
@@ -187,17 +228,26 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
     print("reading GT ")
     print(gt_names)
 
-#TODO DO BETTER!!!!!!!
     #Unet 1
-    codedImportant=[4,5,6] #actively increase
-    codedUnImportant=[0,1,2,3] #actively decrease
-    codedIgnore=[]
+    if options["impu1"] is not None: codedImportant=extractClasses(options["impu1"])
+    else: codedImportant=[4,5,6] #actively increase
+    if options["unimpu1"] is not None: codedUnImportant=extractClasses(options["unimpu1"])
+    else:codedUnImportant=[0,1,2,3] #actively decrease
+    if options["ign1"] is not None: codedIgnore=extractClasses(options["ign1"])
+    else: codedIgnore=[]
+    print("UNET 1: Important "+str(codedImportant)+" Unimportant: "+str(codedUnImportant)+" IGNORE: "+str(codedIgnore))
+
     #Unet2
     useSecondNet=bool(options["u2"])
     if useSecondNet:
-        important2=[4,5,6]
-        unimportant2=[1,2,3]
-        ignore2=[0]
+        if options["impu2"] is not None: important2=extractClasses(options["impu2"])
+        else: important2=[4,5,6] #actively increase
+        if options["unimpu2"] is not None: unimportant2=extractClasses(options["unimpu2"])
+        else:unimportant2=[1,2,3] #actively decrease
+        if options["ign2"] is not None: ignore2=extractClasses(options["ign2"])
+        else: ignore2=[0]
+
+        print("UNET 2: Important "+str(important2)+" Unimportant: "+str(unimportant2)+" IGNORE: "+str(ignore2))
 
     # Add a unet2 parameter, if it is present, define new training/validation dataset with the important2, unimportant2,ignore2 lists.
     # define and train a second unet based on those dataloaders,

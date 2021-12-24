@@ -1,6 +1,8 @@
 
 Data/
 output/
+OUTPUT/
 *.jpg
 *.png
 *.pyc
+*.tif

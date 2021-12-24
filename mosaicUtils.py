@@ -8,12 +8,14 @@ from postProcessing import readDEM
 
 def subdivideImage(image,siteName,outputDir,subdiv):
     #print("subdividing ")
-    #print(image)
+    #print(image[0])
     #print(siteName)
     #print(subdiv)
 
     if image[0]=="ROI": fullImage=cv2.imread(image[1],cv2.IMREAD_GRAYSCALE)
-    elif image[0]=="DEM":fullImage=readDEM(image[1])
+    elif image[0]=="DEM":
+        #print("reading "+str(image[1]))
+        fullImage=readDEM(image[1])
     else: fullImage=cv2.imread(image[1])
 
     for i,s in enumerate(subdiv):
@@ -23,7 +25,7 @@ def subdivideImage(image,siteName,outputDir,subdiv):
 
         dirName=outputDir+"/"+newSiteName+"/"
         newImage=fullImage[s[0]:s[1],s[2]:s[3]]
-        if image[0]==DEM:newImageName=dirName+newSiteName+image[0]+".tif"
+        if image[0]=="DEM":newImageName=dirName+newSiteName+image[0]+".tif"
         else: newImageName=dirName+newSiteName+image[0]+".jpg"
 
         # Add a border to the roi
@@ -50,7 +52,7 @@ def processSite(folder,siteName,spList,nSteps,outFolder):
 
     treeTopsFile=folder+"/"+siteName+"Treetops_ROI.jpg"
     mosaicFile=folder+"/"+siteName+".jpg"
-    demFile=folder+"/"+siteName+".tif"
+    demFile=folder+"/"+siteName+"DEM.tif"
 
     # Find contours
     cnts = cv2.findContours(255-roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -73,7 +75,7 @@ def processSite(folder,siteName,spList,nSteps,outFolder):
             #cv2.imwrite(str(i)+str(j)+"shit.png",roiPart)
 
     #now that we have the subdivisions that we want to make, add all the images that we want to sudvivide
-    imagesToSubdivide=[("ROI",roiFile),("Treetops_ROI",treeTopsFile),("",mosaicFile),("dem",demFile)]
+    imagesToSubdivide=[("ROI",roiFile),("Treetops_ROI",treeTopsFile),("",mosaicFile),("DEM",demFile)]
     for i in range(len(spList)):
         #print("label "+str(i))
         currentMaskFile=folder+"/"+siteName+spList[i]+".jpg"

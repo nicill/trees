@@ -13,6 +13,8 @@ from models import Unet2D
 from metrics import hausdorf_distance, avg_euclidean_distance
 from metrics import matched_percentage
 from utils import list_from_mask
+from osgeo import gdal
+from postProcessing import readDEM
 
 def toSingleList(aListOfLists,excludedIndex):
     returnList=[]
@@ -214,7 +216,7 @@ def extractClasses(classString):
 """
 Networks
 """
-def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, verbose=1,resampleF=1):
+def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClasses=47, verbose=1,resampleF=1):
     # Init
     print("\n\n\n\n STARTING TRAIN  ")
     options = parse_inputs()
@@ -293,6 +295,15 @@ def train(cases, gt_names, roiNames, net_name, dictSitesMosaics, nClasses=47, ve
             interpolation=cv2.INTER_LINEAR) < 100).astype(np.uint8) )
             #cv2.imwrite("ROI"+str(counter)+".png",rois[-1])
             counter+=1
+
+        dems = []
+        counter=0
+        for c_i in demNames:dems.append(readDEM(c_i))
+            #dems.append( (cv2.resize(image, (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),
+            #interpolation=cv2.INTER_LINEAR) < 100).astype(np.uint8) )
+
+
+
     else:
         mosaics = [cv2.imread(c_i) for c_i in cases]
         rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
@@ -586,12 +597,16 @@ def main():
     print("\n\n")
     print(rois)
 
+    dems = [ d_path+x+"/"+x+"DEM.tif" for x in siteFolders ]
+    print("\n\n")
+    print(dems)
+
     dictSitesMosaics=tellApartSitesFromMosaics(siteFolders)
     print(dictSitesMosaics)
 
     ''' <Detection task> '''
     net_name = 'semantic-unet'
-    train(cases, gt_names, rois, net_name,dictSitesMosaics , numClasses,1,scalePercent)
+    train(cases, gt_names, rois, dems, net_name,dictSitesMosaics , numClasses,1,scalePercent)
 
 
 if __name__ == '__main__':

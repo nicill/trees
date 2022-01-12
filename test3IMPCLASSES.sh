@@ -5,11 +5,11 @@ GPU=$1
 dataDir=$2
 whatToDo=$3
 prefix=$4
-i1=$4
-ui1=$5
-i2=$6
-ui2=$7
-ig2=$8
+i1=$5
+ui1=$6
+i2=$7
+ui2=$8
+ig2=$9
 
 softDir=$(pwd)
 conversion=$softDir/speciesConversionTableLuca.txt

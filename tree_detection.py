@@ -80,7 +80,6 @@ def checkGT(folder,siteName,sList,sDict):
             if currentMask is None: print("species "+sList[i]+" not present in site "+siteName)
             else: mask[currentMask<150]=sDict[sList[i]] #masks are black on white background
 
-
         # in the end, put everything outside thr ROI to background
         mask[roi>150]=0
         #print(np.unique(mask))
@@ -288,10 +287,6 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
     mosaics = [cv2.imread(c_i) for c_i in cases]
     rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
 
-    dems = []
-    counter=0
-    for c_i in demNames:dems.append(readDEM(c_i))
-
     originalSizes= []
     for c_i in cases:
         nowIm=cv2.imread(c_i)
@@ -305,7 +300,11 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
     print("Number of channels is "+str(numChannels))
 
     if numChannels==4:
-        print("jiojoi")
+
+        dems = []
+        counter=0
+        for c_i in demNames:dems.append(readDEM(c_i))
+
         x = [
             np.moveaxis(
                 np.concatenate([mosaic, np.expand_dims(dem, -1)], -1),
@@ -314,14 +313,8 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
             for mosaic, dem in zip(mosaics, dems)
         ]
     else:#numChannels==3
-        print("aaaaaaaaaaaaaaa")
         x = [np.moveaxis(mosaic,-1, 0).astype(np.float32) for mosaic in mosaics]
 
-
-#    x = [
-#         np.moveaxis(mosaic, -1, 0)
-#        for mosaic in mosaics
-#    ]
 
     mean_x = [np.mean(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
     std_x = [np.std(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
@@ -394,6 +387,8 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
             print(model_name2)
         else: print("NOT USING SECOND UNET")
 
+        epochs = parse_inputs()['epochs']
+        patience = parse_inputs()['patience']
 
         try:
             net.load_model( model_name)
@@ -410,53 +405,30 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
                     (c['c'], c['nc'], n_params)
                 )
 
-            if val_split > 0:
-                n_samples = len(train_x)
+            n_samples = len(train_x)
 
-                n_t_samples = int(n_samples * (1 - val_split))
+            n_t_samples = int(n_samples * (1 - val_split))
 
-                d_train = train_x[:n_t_samples]
-                d_val = train_x[n_t_samples:]
+            d_train = train_x[:n_t_samples]
+            d_val = train_x[n_t_samples:]
 
-                l_train = train_y[:n_t_samples]
-                l_val = train_y[n_t_samples:]
+            l_train = train_y[:n_t_samples]
+            l_val = train_y[n_t_samples:]
 
-                r_train = train_roi[:n_t_samples]
-                r_val = train_roi[n_t_samples:]
+            r_train = train_roi[:n_t_samples]
+            r_val = train_roi[n_t_samples:]
 
-                print('Training datasets (with validation)')
-                train_dataset = Cropping2DDataset(
-                    d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augmentUnet1,decrease=decreaseUnet1, patch_size=patch_size, overlap=overlap
-                )
-
-
-                print('Validation datasets (with validation)')
-                val_dataset = Cropping2DDataset(
-                    d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augmentUnet1,decrease=decreaseUnet1, patch_size=patch_size, overlap=overlap
-                )
-
-                if useSecondNet:
-                    train_dataset2 = Cropping2DDataset(
-                    d_train, l_train, r_train, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
-                )
-                    val_dataset2 = Cropping2DDataset(
-                    d_val, l_val, r_val, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
-                )
+            print('Training datasets (with validation)')
+            train_dataset = Cropping2DDataset(
+                d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augmentUnet1,decrease=decreaseUnet1, patch_size=patch_size, overlap=overlap
+            )
 
 
-            else:
-                raise Exception("NOT DOING THIS!")
-                """
-                print('Training dataset')
-                train_dataset = Cropping2DDataset(
-                    train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease,  patch_size=patch_size, overlap=overlap
-                )
+            print('Validation datasets (with validation)')
+            val_dataset = Cropping2DDataset(
+                d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augmentUnet1,decrease=decreaseUnet1, patch_size=patch_size, overlap=overlap
+            )
 
-                print('Validation dataset')
-                val_dataset = Cropping2DDataset(
-                    train_x, train_y, train_roi, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
-                )
-                """
 
             train_dataloader = DataLoader(
                 train_dataset, batch_size, True, num_workers=num_workers
@@ -465,17 +437,6 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
                 val_dataset, batch_size, num_workers=num_workers
             )
 
-            if useSecondNet:
-                train_dataloader2 = DataLoader(
-                train_dataset2, batch_size, True, num_workers=num_workers
-            )
-                val_dataloader2 = DataLoader(
-                val_dataset2, batch_size, num_workers=num_workers
-            )
-
-
-            epochs = parse_inputs()['epochs']
-            patience = parse_inputs()['patience']
 
             net.fit(
                 train_dataloader,
@@ -484,18 +445,7 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
                 patience=patience,
             )
 
-            if useSecondNet:
-                    print("TRAINING SECOND MODEL!!!!!!!!!!!!")
-                    net2.fit(
-                    train_dataloader2,
-                    val_dataloader2,
-                    epochs=epochs,
-                    patience=patience,
-            )
-
-
             net.save_model( model_name)
-            if useSecondNet:net2.save_model( model_name2)
 
         if verbose > 0:
             print(
@@ -522,6 +472,47 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
             # now reclassify usingn second Unet
             if useSecondNet:
 
+                n_samples = len(train_x)
+                n_t_samples = int(n_samples * (1 - val_split))
+
+                d_train = train_x[:n_t_samples]
+                d_val = train_x[n_t_samples:]
+
+                l_train = train_y[:n_t_samples]
+                l_val = train_y[n_t_samples:]
+
+                r_train = train_roi[:n_t_samples]
+                r_val = train_roi[n_t_samples:]
+
+
+                #define datasets
+                train_dataset2 = Cropping2DDataset(
+                d_train, l_train, r_train, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+            )
+                val_dataset2 = Cropping2DDataset(
+                d_val, l_val, r_val, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+            )
+
+                #define data loaders
+                train_dataloader2 = DataLoader(
+                train_dataset2, batch_size, True, num_workers=num_workers
+            )
+                val_dataloader2 = DataLoader(
+                val_dataset2, batch_size, num_workers=num_workers
+            )
+
+                #train
+                print("TRAINING SECOND MODEL!!!!!!!!!!!!")
+                net2.fit(
+                train_dataloader2,
+                val_dataloader2,
+                epochs=epochs,
+                patience=patience,
+        )
+                # save the second model
+                net2.save_model( model_name2)
+
+                #test!
                 yi2 = net2.test([test_x[ind]])
                 pred_y2 = np.argmax(yi2[0], axis=0)
                 heatMap_y2 = np.max(yi2[0], axis=0)

@@ -105,6 +105,12 @@ def parse_inputs():
         help='text file with the code for classes to be fused'
     )
     parser.add_argument(
+        '-numC', '--NumChannels',
+        dest='nChan',
+        type=int, default=3,
+        help='Number of Channels, 3=RBG, 4 include also DEM'
+    )
+    parser.add_argument(
         '-e', '--epochs',
         dest='epochs',
         type=int,  default=20,
@@ -216,7 +222,7 @@ def extractClasses(classString):
 """
 Networks
 """
-def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClasses=47, verbose=1,resampleF=1):
+def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClasses=47, verbose=1):
     # Init
     print("\n\n\n\n STARTING TRAIN  ")
     options = parse_inputs()
@@ -269,8 +275,8 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
         image=cv2.imread(im,cv2.IMREAD_GRAYSCALE)
         if image is None: raise Exception("not read "+im)
 
-        if resampleF!=1:
-            image= np.argmax([cv2.resize((image==i).astype("uint8"), (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),interpolation=cv2.INTER_LINEAR) for i in range(nClasses) ], axis=0)
+        #if resampleF!=1:
+        #    image= np.argmax([cv2.resize((image==i).astype("uint8"), (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),interpolation=cv2.INTER_LINEAR) for i in range(nClasses) ], axis=0)
 
         counter+=1
         y.append(image.astype(np.uint8))
@@ -278,35 +284,13 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
     #Print Unique values
     for yi in y: print(np.unique(yi))
 
-    if resampleF!=1:
-        mosaics = []
-        counter=0
-        for c_i in cases:
-            image=cv2.imread(c_i)
-            mosaics.append(cv2.resize(image, (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),interpolation=cv2.INTER_CUBIC))
-            #cv2.imwrite("mos"+str(counter)+".png",mosaics[-1])
-            counter+=1
 
-        rois = []
-        counter=0
-        for c_i in roiNames:
-            image=cv2.imread(c_i,cv2.IMREAD_GRAYSCALE)
-            rois.append( (cv2.resize(image, (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),
-            interpolation=cv2.INTER_LINEAR) < 100).astype(np.uint8) )
-            #cv2.imwrite("ROI"+str(counter)+".png",rois[-1])
-            counter+=1
+    mosaics = [cv2.imread(c_i) for c_i in cases]
+    rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
 
-        dems = []
-        counter=0
-        for c_i in demNames:dems.append(readDEM(c_i))
-            #dems.append( (cv2.resize(image, (int(image.shape[1]*resampleF),int(image.shape[0]*resampleF)),
-            #interpolation=cv2.INTER_LINEAR) < 100).astype(np.uint8) )
-
-
-
-    else:
-        mosaics = [cv2.imread(c_i) for c_i in cases]
-        rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
+    dems = []
+    counter=0
+    for c_i in demNames:dems.append(readDEM(c_i))
 
     originalSizes= []
     for c_i in cases:
@@ -316,10 +300,28 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
     #print(mosaics)
     #print("LETs make lists of lists with "+str(dictSitesMosaics))
 
-    x = [
-         np.moveaxis(mosaic, -1, 0)
-        for mosaic in mosaics
-    ]
+    #Read number of Channels
+    numChannels=options["nChan"]
+    print("Number of channels is "+str(numChannels))
+
+    if numChannels==4:
+        print("jiojoi")
+        x = [
+            np.moveaxis(
+                np.concatenate([mosaic, np.expand_dims(dem, -1)], -1),
+                -1, 0
+            ).astype(np.float32)
+            for mosaic, dem in zip(mosaics, dems)
+        ]
+    else:#numChannels==3
+        print("aaaaaaaaaaaaaaa")
+        x = [np.moveaxis(mosaic,-1, 0).astype(np.float32) for mosaic in mosaics]
+
+
+#    x = [
+#         np.moveaxis(mosaic, -1, 0)
+#        for mosaic in mosaics
+#    ]
 
     mean_x = [np.mean(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
     std_x = [np.std(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
@@ -528,22 +530,15 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
                 #pred_y[heatMap_y<probTH]=pred_y2[heatMap_y<probTH]
 
                 # Keep the results with higher probability
-
                 pred_y[heatMap_y<heatMap_y2]=pred_y2[heatMap_y<heatMap_y2]
 
-            if resampleF!=1:
-                cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",cv2.resize(pred_y,originalSizes[i],interpolation=cv2.INTER_NEAREST).astype(np.uint8))
-                cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+"SMALL.png",
-                    (pred_y).astype(np.uint8)
-                )
-
-            else:
-                cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",
-                    (pred_y).astype(np.uint8)
-                )
-                cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+"ONE.png",
-                    (pred_z).astype(np.uint8)
-                )
+            #write the results
+            cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",
+                (pred_y).astype(np.uint8)
+            )
+            cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+"ONE.png",
+                (pred_z).astype(np.uint8)
+            )
             print("Results FILE!!!!!!!!!!!!!!!!!!!!! "+str(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png"))
 
     if verbose > 0:
@@ -564,7 +559,6 @@ def main():
     c = color_codes()
 
     #S00 is the background class
-    scalePercent=1
     maxSpeciesCode=46
     tagFile=options['labTab']
     speciesDict={}
@@ -606,7 +600,7 @@ def main():
 
     ''' <Detection task> '''
     net_name = 'semantic-unet'
-    train(cases, gt_names, rois, dems, net_name,dictSitesMosaics , numClasses,1,scalePercent)
+    train(cases, gt_names, rois, dems, net_name,dictSitesMosaics , numClasses,1)
 
 
 if __name__ == '__main__':

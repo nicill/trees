@@ -315,7 +315,6 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
     else:#numChannels==3
         x = [np.moveaxis(mosaic,-1, 0).astype(np.float32) for mosaic in mosaics]
 
-
     mean_x = [np.mean(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
     std_x = [np.std(xi.reshape((len(xi), -1)), axis=-1) for xi in x]
 
@@ -462,7 +461,7 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
             pred_y = np.argmax(yi[0], axis=0)
             heatMap_y = np.max(yi[0], axis=0)
 
-            #now exclude classes with probability under the thershold
+            #now exclude classes with probability under the threshold
             thRead=parse_inputs()['threshold']
             probTH=thRead/100.
 
@@ -472,56 +471,63 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
             # now reclassify usingn second Unet
             if useSecondNet:
 
-                n_samples = len(train_x)
-                n_t_samples = int(n_samples * (1 - val_split))
-
-                d_train = train_x[:n_t_samples]
-                d_val = train_x[n_t_samples:]
-
-                l_train = train_y[:n_t_samples]
-                l_val = train_y[n_t_samples:]
-
-                r_train = train_roi[:n_t_samples]
-                r_val = train_roi[n_t_samples:]
+                if ind==0:#only train the second unet for the first test mosaic
+                    test_x = norm_x[i]#test_x is now a list!!!!!!!!!!!!!!!!!!!!!
+                    #create an inverse dictionary!
+                    #dictMosaicsSites=invertIndicesDict(dictSitesMosaics)
+                    train_y = toSingleList(y,i)
+                    train_roi = toSingleList(rois,i)
+                    train_x = toSingleList(norm_x,i)
 
 
-                #define datasets
-                train_dataset2 = Cropping2DDataset(
-                d_train, l_train, r_train, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+                    n_samples = len(train_x)
+                    n_t_samples = int(n_samples * (1 - val_split))
+
+                    d_train = train_x[:n_t_samples]
+                    d_val = train_x[n_t_samples:]
+
+                    l_train = train_y[:n_t_samples]
+                    l_val = train_y[n_t_samples:]
+
+                    #here every
+                    r_train = train_roi[:n_t_samples]
+                    r_val = train_roi[n_t_samples:]
+
+
+                    #define datasets
+                    train_dataset2 = Cropping2DDataset(
+                    d_train, l_train, r_train, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+                )
+                    val_dataset2 = Cropping2DDataset(
+                    d_val, l_val, r_val, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
+                )
+
+                    #define data loaders
+                    train_dataloader2 = DataLoader(
+                    train_dataset2, batch_size, True, num_workers=num_workers
+                )
+                    val_dataloader2 = DataLoader(
+                    val_dataset2, batch_size, num_workers=num_workers
+                )
+
+                    #train
+                    print("TRAINING SECOND MODEL!!!!!!!!!!!!")
+                    net2.fit(
+                    train_dataloader2,
+                    val_dataloader2,
+                    epochs=epochs,
+                    patience=patience,
             )
-                val_dataset2 = Cropping2DDataset(
-                d_val, l_val, r_val, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
-            )
+                    # save the second model
+                    net2.save_model( model_name2)
 
-                #define data loaders
-                train_dataloader2 = DataLoader(
-                train_dataset2, batch_size, True, num_workers=num_workers
-            )
-                val_dataloader2 = DataLoader(
-                val_dataset2, batch_size, num_workers=num_workers
-            )
+            #test!
+            yi2 = net2.test([test_x[ind]])
+            pred_y2 = np.argmax(yi2[0], axis=0)
+            heatMap_y2 = np.max(yi2[0], axis=0)
 
-                #train
-                print("TRAINING SECOND MODEL!!!!!!!!!!!!")
-                net2.fit(
-                train_dataloader2,
-                val_dataloader2,
-                epochs=epochs,
-                patience=patience,
-        )
-                # save the second model
-                net2.save_model( model_name2)
-
-                #test!
-                yi2 = net2.test([test_x[ind]])
-                pred_y2 = np.argmax(yi2[0], axis=0)
-                heatMap_y2 = np.max(yi2[0], axis=0)
-
-                # NOW, Keep the high probability results from the first unet
-                #pred_y[heatMap_y<probTH]=pred_y2[heatMap_y<probTH]
-
-                # Keep the results with higher probability
-                pred_y[heatMap_y<heatMap_y2]=pred_y2[heatMap_y<heatMap_y2]
+            # Keep the results with higher probability
+            pred_y[heatMap_y<heatMap_y2]=pred_y2[heatMap_y<heatMap_y2]
 
             #write the results
             cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",

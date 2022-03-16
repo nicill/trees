@@ -16,7 +16,8 @@ conversion=$softDir/speciesConversionTableLuca.txt
 outDir=$softDir/output/
 codeString="0 1"
 
-chan=4
+chan=3
+epochs=1
 
 for code in $codeString
 do
@@ -46,12 +47,12 @@ for a in 0 2 5 10 20 25 50 75
 do
   for d in 0 10 15 25 50 90
   do
-    for th in 25 50
+    for th in 90 25 50
     do
         echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^starting $a $d $th"
         date
 	if [[ $compute = 1 ]];then
-	        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -numC $chan -d $dataDir -e 20 -labFus $conversion -aug $a -dec $d -th $th -u2 True -imp1 $i1 -unimp1 $ui1 -imp2 $i2 -unimp2 $ui2 -ign2 $ig2
+	        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -numC $chan -d $dataDir -e $epochs -labFus $conversion -aug $a -dec $d -th $th -u2 True -imp1 $i1 -unimp1 $ui1 -imp2 $i2 -unimp2 $ui2 -ign2 $ig2
 	fi
 	if [[ $evaluate = 1 ]];then
 

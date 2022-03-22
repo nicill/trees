@@ -14,7 +14,7 @@ ig2=$9
 softDir=$(pwd)
 conversion=$softDir/speciesConversionTableLuca.txt
 outDir=$softDir/output/
-codeString="0 1 4"
+codeString="0 1 2 3 4 5 6 7"
 
 chan=3
 

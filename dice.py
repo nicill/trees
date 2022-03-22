@@ -81,6 +81,15 @@ def pixelPercLabelI(gt,i):
     if total !=0 : return totalI/total
     else: return 1
 
+#percentage of pixels incorrectly attributed to class i
+def incorrectPercToI(gt,predicted,i):
+    totalIncorrect = np.sum(gt != predicted)
+    totalWrongToI = np.sum(np.logical_and(gt != i, predicted == i))
+
+    if totalIncorrect !=0 : return totalWrongToI/totalIncorrect
+    else: return 1
+
+
 
 #precision, how many of those predicted are correct
 def PrecisionLabelI(gt,predicted,i):# return the percentage of pixels of class i incorrectly matched over the total of positives

@@ -17,7 +17,7 @@ def main(argv):
     #print(np.unique(mask))
 
     code=int(argv[3])
-    numClasses=6 #this is the number of the bigger
+    numClasses=8 #this is the number of the bigger
     #class present (classes 0-numClasses both included)
 
     try:
@@ -37,40 +37,42 @@ def main(argv):
     elif code==1: # Evaluate percentage of matched pixels (includes Background but not undecided pixels)
         result=dice.equalValue(mask.copy(),gtMask.copy(),ROI)
         #print("*******************************************  % Pixels with equal value (inlcudes BKG class): "+str(result))
-    elif code==2:# Evaluate percentage of TPR for each class
+    elif code==2:# Evaluate RECALL for each class
         result=[]
         for i in range(numClasses+1):
             aux1=gtMask.copy()
             aux2=mask.copy()
             result.append(dice.RecallLabelI(aux1[ROI],aux2[ROI],i))
             #print("******************************************* Class "+str(i)+"  Recall "+str(result))
-    elif code==3:# Evaluate percentage of misclassified pixels from each class
-        result=[]
-        for i in range(numClasses+1):
-            result.append(dice.incorrectPercLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
-            #print("******************************************* Class "+str(i)+"  Precision: "+str(result))
-    elif code==4:# return percentage of pixels from each class
-        result=[]
-        for i in range(numClasses+1):
-            result.append(dice.pixelPercLabelI(gtMask.copy()[ROI],i))
-            #print("******************************************* Class "+str(i)+"  Precision: "+str(result))
-    elif code==5:# Evaluate precision for each class
+    elif code==3:# Evaluate precision for each class
         result=[]
         for i in range(numClasses+1):
             result.append(dice.PrecisionLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
             #print("******************************************* Class "+str(i)+"  Precision: "+str(result))
-    elif code==6:# Evaluate Dice for each class
+    elif code==4:# Evaluate Dice for each class
         result=[]
         for i in range(numClasses+1):
             result.append(dice.DiceLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
             #print("******************************************* Class "+str(i)+"  Dice: "+str(result))
-    elif code==7:# Evaluate correctly class in each class
+    elif code==5:# Evaluate percentage of misclassified pixels from each class
+        result=[]
+        for i in range(numClasses+1):
+            result.append(dice.incorrectPercLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
+    elif code==6:# Evaluate percentage of pixels misclassified into each class
+        result=[]
+        for i in range(numClasses+1):
+            result.append(dice.incorrectPercToI(gtMask.copy()[ROI],mask.copy()[ROI],i))
+    elif code==7:# return percentage of pixels from each class
+        result=[]
+        for i in range(numClasses+1):
+            result.append(dice.pixelPercLabelI(gtMask.copy()[ROI],i))
+            #print("******************************************* Class "+str(i)+"  Precision: "+str(result))
+    elif code==8:# Evaluate correctly class in each class
         mask[ROI==0]=255
         result=[]
         for i in range(numClasses+1):
             result.append(dice.CorrectLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
-    elif code==8:# Evaluate correctly class in each class
-
+    elif code==9:# Evaluate correctly class in each class
         result=[]
         for i in range(numClasses+1):
             result.append(dice.totalLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))

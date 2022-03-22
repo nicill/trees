@@ -98,7 +98,9 @@ if __name__ == '__main__':
 
     #ignore anything outside of the ROI
     dem[roi==255]=0
-    #demtoJPG(dem,"demjpg.jpg")
+    demtoJPG(dem,"demjpg.jpg")
+
+    sys.exit()
 
     th=[0.1,0.25,0.2,0.1]
     w=[1,2,5,10]

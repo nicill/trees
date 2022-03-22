@@ -51,7 +51,7 @@ do
         echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^starting $a $d $th"
         date
 	if [[ $compute = 1 ]];then
-	        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -numC $chan -d $dataDir -e 20 -labFus $conversion -aug $a -dec $d -th $th -u2 True -imp1 $i1 -unimp1 $ui1 -imp2 $i2 -unimp2 $ui2 -ign2 $ig2
+	        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -numC $chan -d $dataDir -e $epochs -labFus $conversion -aug $a -dec $d -th $th -u2 True -imp1 $i1 -unimp1 $ui1 -imp2 $i2 -unimp2 $ui2 -ign2 $ig2
 	fi
 	if [[ $evaluate = 1 ]];then
 

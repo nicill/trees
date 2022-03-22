@@ -16,6 +16,9 @@ from utils import list_from_mask
 #from osgeo import gdal
 #from postProcessing import readDEM
 
+#globalVAR=0
+
+
 def toSingleList(aListOfLists,excludedIndex):
     returnList=[]
     for i in range(len(aListOfLists)):
@@ -356,8 +359,7 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
             )
 
         test_x = norm_x[i]#test_x is now a list!!!!!!!!!!!!!!!!!!!!!
-        #create an inverse dictionary!
-        #dictMosaicsSites=invertIndicesDict(dictSitesMosaics)
+
         train_y = toSingleList(y,i)
         train_roi = toSingleList(rois,i)
         train_x = toSingleList(norm_x,i)
@@ -422,7 +424,6 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
                 d_train, l_train, r_train, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augmentUnet1,decrease=decreaseUnet1, patch_size=patch_size, overlap=overlap
             )
 
-
             print('Validation datasets (with validation)')
             val_dataset = Cropping2DDataset(
                 d_val, l_val, r_val, numLabels=nClasses,important=codedImportant, unimportant=codedUnImportant, ignore=codedIgnore,augment=augmentUnet1,decrease=decreaseUnet1, patch_size=patch_size, overlap=overlap
@@ -468,17 +469,19 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
             pred_z=pred_y.copy()
             pred_z[heatMap_y<probTH]=255
 
-            # now reclassify usingn second Unet
+            # now reclassify using second Unet
             if useSecondNet:
 
-                if ind==0:#only train the second unet for the first test mosaic
-                    test_x = norm_x[i]#test_x is now a list!!!!!!!!!!!!!!!!!!!!!
-                    #create an inverse dictionary!
-                    #dictMosaicsSites=invertIndicesDict(dictSitesMosaics)
+                # this used to be inside the if, which seemed wrong
+                test_x = norm_x[i]#test_x is now a list!!!!!!!!!!!!!!!!!!!!!
+
+
+                if ind==0:#only train the second unet once
+
                     train_y = toSingleList(y,i)
                     train_roi = toSingleList(rois,i)
                     train_x = toSingleList(norm_x,i)
-
+                    train_roi_updated=[updateRoi(net,train_x[i],train_roi[i],probTH) for i in range(len(train_roi))]
 
                     n_samples = len(train_x)
                     n_t_samples = int(n_samples * (1 - val_split))
@@ -489,10 +492,13 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
                     l_train = train_y[:n_t_samples]
                     l_val = train_y[n_t_samples:]
 
-                    #here every
-                    r_train = train_roi[:n_t_samples]
-                    r_val = train_roi[n_t_samples:]
+                    #here every roi has been updated with probability
+                    r_train = train_roi_updated[:n_t_samples]
+                    r_val = train_roi_updated[n_t_samples:]
 
+                    # Test all training mosaics with the first unet
+                    testedTraining=net.test(d_train)
+                    testedValid=net.test(d_train)
 
                     #define datasets
                     train_dataset2 = Cropping2DDataset(
@@ -547,6 +553,21 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
             '%sTraining finished%s (total time %s)\n' %
             (c['r'], c['nc'], time_str)
         )
+
+def updateRoi(net,data,roi,probTH):
+    #print("HELOU!!!!!!!!!!!!!!!! "+str(probTH))
+    retVal=roi.copy()
+    #print("nonzero roi "+str(np.count_nonzero(retVal!=0)))
+    yi = net.test([data])
+    heatMap_y = np.max(yi[0], axis=0)
+    retVal[heatMap_y>probTH]=0
+    #print("nonzero roi after "+str(np.count_nonzero(retVal!=0)))
+    #print(np.count_nonzero(heatMap_y>probTH))
+    #global globalVAR
+    #cv2.imwrite(str(globalVAR)+"ROI.jpg",roi*255)
+    #cv2.imwrite(str(globalVAR)+"shit.jpg",retVal*255)
+    #globalVAR+=1
+    return retVal
 
 
 def main():

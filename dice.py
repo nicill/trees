@@ -65,6 +65,23 @@ def RecallLabelI(gt,predicted,i):# return the percentage of pixels of class i co
     if sumEquals!=0:return np.sum(np.logical_and(gt == i, predicted == i)) / sumEquals
     else:return 0
 
+#percentage of incorrectly classified pixels belonging to class i
+def incorrectPercLabelI(gt,predicted,i):
+    totalIncorrect = np.sum(gt != predicted)
+    totalMissedI = np.sum(np.logical_and(gt == i, predicted != i))
+
+    if totalIncorrect !=0 : return totalMissedI/totalIncorrect
+    else: return 1
+
+#percentage of pixels belonging to class i
+def pixelPercLabelI(gt,i):
+    totalI = np.sum(gt == i)
+    total = np.sum(gt != 0)
+
+    if total !=0 : return totalI/total
+    else: return 1
+
+
 #precision, how many of those predicted are correct
 def PrecisionLabelI(gt,predicted,i):# return the percentage of pixels of class i incorrectly matched over the total of positives
 

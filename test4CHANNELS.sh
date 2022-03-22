@@ -14,7 +14,7 @@ ig2=$9
 softDir=$(pwd)
 conversion=$softDir/speciesConversionTableLuca.txt
 outDir=$softDir/output/
-codeString="0 1"
+codeString="0 1 4"
 
 chan=3
 
@@ -72,6 +72,7 @@ do
 						echo " $outFile exists"
 						python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $outFile $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix".txt"
 						python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $outFile2 $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix"ONE.txt"
+
 					fi
 			    fi
 			done

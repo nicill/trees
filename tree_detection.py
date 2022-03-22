@@ -13,8 +13,8 @@ from models import Unet2D
 from metrics import hausdorf_distance, avg_euclidean_distance
 from metrics import matched_percentage
 from utils import list_from_mask
-from osgeo import gdal
-from postProcessing import readDEM
+#from osgeo import gdal
+#from postProcessing import readDEM
 
 def toSingleList(aListOfLists,excludedIndex):
     returnList=[]

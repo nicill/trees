@@ -16,7 +16,7 @@ conversion=$softDir/speciesConversionTableLuca.txt
 outDir=$softDir/output/
 codeString="0 1"
 
-chan=4
+chan=3
 
 for code in $codeString
 do
@@ -46,7 +46,7 @@ for a in 0 2 5 10 20 25 50 75
 do
   for d in 0 10 15 25 50 90
   do
-    for th in 25 50
+    for th in 25 50 75
     do
         echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^starting $a $d $th"
         date

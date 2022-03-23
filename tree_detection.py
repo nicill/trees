@@ -16,9 +16,6 @@ from utils import list_from_mask
 #from osgeo import gdal
 #from postProcessing import readDEM
 
-#globalVAR=0
-
-
 def toSingleList(aListOfLists,excludedIndex):
     returnList=[]
     for i in range(len(aListOfLists)):
@@ -286,9 +283,19 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
     #Print Unique values
     for yi in y: print(np.unique(yi))
 
-
     mosaics = [cv2.imread(c_i) for c_i in cases]
     rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
+
+    #NOW, ADD THE FLOOR TO THE ROI
+    ch=0
+    for auxInd in range(len(rois)):
+        gtIm=y[auxInd]
+        rois[auxInd][gtIm==0]=0
+        # also, shift classes
+        y[auxInd]=y[auxInd]-1
+        #cv2.imwrite(str(ch)+"ROI.jpg",rois[auxInd])
+        #cv2.imwrite(str(ch)+"LABEL.jpg",y[auxInd])
+        ch+=1
 
     originalSizes= []
     for c_i in cases:
@@ -555,18 +562,10 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
         )
 
 def updateRoi(net,data,roi,probTH):
-    #print("HELOU!!!!!!!!!!!!!!!! "+str(probTH))
     retVal=roi.copy()
-    #print("nonzero roi "+str(np.count_nonzero(retVal!=0)))
     yi = net.test([data])
     heatMap_y = np.max(yi[0], axis=0)
     retVal[heatMap_y>probTH]=0
-    #print("nonzero roi after "+str(np.count_nonzero(retVal!=0)))
-    #print(np.count_nonzero(heatMap_y>probTH))
-    #global globalVAR
-    #cv2.imwrite(str(globalVAR)+"ROI.jpg",roi*255)
-    #cv2.imwrite(str(globalVAR)+"shit.jpg",retVal*255)
-    #globalVAR+=1
     return retVal
 
 

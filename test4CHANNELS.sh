@@ -17,6 +17,7 @@ outDir=$softDir/output/
 codeString="0 1 2 3 4 5 6 7"
 
 chan=3
+epochs=10
 
 for code in $codeString
 do

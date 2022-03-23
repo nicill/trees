@@ -57,16 +57,16 @@ def main(argv):
         if code==0: # One value per site
             result=averageRowsToDict(f)
         elif code==1: # one value per class per site
-            result=averageClassesInRowsToDict(f,numClasses+1)
+            result=averageClassesInRowsToDict(f,numClasses)
 
     if isinstance(result,dict):
         for k,v in result.items():
             print("parameters "+str(k)+" : ",end="")
-            for x in v: print("{:.2f} ".format(x),end="")
-            print(sum(v),end="")
-            print("")
-
-
+            if isinstance(v,list):
+                for x in v: print("{:.2f} ".format(x),end="")
+                print(sum(v),end="")
+                print("")
+            else: print(v)
     else:print(str(result)+" ",end="")
 
     return result

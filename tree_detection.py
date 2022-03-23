@@ -280,9 +280,6 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
         counter+=1
         y.append(image.astype(np.uint8))
 
-    #Print Unique values
-    for yi in y: print(np.unique(yi))
-
     mosaics = [cv2.imread(c_i) for c_i in cases]
     rois = [(cv2.imread(c_i,cv2.IMREAD_GRAYSCALE) < 100).astype(np.uint8) for c_i in roiNames]
 
@@ -293,10 +290,14 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
         rois[auxInd][gtIm==0]=0
         # also, shift classes
         y[auxInd]=y[auxInd]-1
-        y[auxInd][rois[auxInd]==True]=0
+        y[auxInd][rois[auxInd]==False]=0
         #cv2.imwrite(str(ch)+"ROI.jpg",rois[auxInd])
         #cv2.imwrite(str(ch)+"LABEL.jpg",y[auxInd])
         ch+=1
+
+    #Print Unique values
+    for yi in y: print(np.unique(yi))
+
 
     originalSizes= []
     for c_i in cases:

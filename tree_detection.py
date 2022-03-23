@@ -587,6 +587,8 @@ def main():
 
     print(speciesList)
     print(speciesDict)
+    # NEED TO TAKE OUT ONE CLASS NOT TO CONSIDER THE FLOOR
+    numClasses-=1
     print("Number of different classes "+str(numClasses))
 
     # Data loading (or preparation)

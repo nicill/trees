@@ -2,6 +2,7 @@
 Data/
 output/
 OUTPUT/
+forMariano/
 *.jpg
 *.png
 *.pyc

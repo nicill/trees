@@ -293,6 +293,7 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
         rois[auxInd][gtIm==0]=0
         # also, shift classes
         y[auxInd]=y[auxInd]-1
+        y[auxInd][rois[auxInd]==True]=0
         #cv2.imwrite(str(ch)+"ROI.jpg",rois[auxInd])
         #cv2.imwrite(str(ch)+"LABEL.jpg",y[auxInd])
         ch+=1

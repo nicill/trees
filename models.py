@@ -282,10 +282,10 @@ class Unet2D(BaseModel):
                 print('\033[K', end='', flush=True)
                 print(batch_s, end='\r', flush=True)
 
-            if verbose:
-                print(
-                    '\033[K%sSegmentation finished' % ' '.join([''] * 12)
-                )
+            #if verbose:
+            #    print(
+            #        '\033[K%sSegmentation finished' % ' '.join([''] * 12)
+            #    )
 
             seg.append(seg_i)
 

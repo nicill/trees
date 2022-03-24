@@ -291,6 +291,16 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
         # also, shift classes
         y[auxInd]=y[auxInd]-1
         y[auxInd][rois[auxInd]==False]=0
+        #if not there, write the ROI without FLOOR
+        #print("``````````````````````````````````````````"+str(roiNames[auxInd]))
+        floorRoiName=roiNames[auxInd][:-4]+"FLOOR"+roiNames[auxInd][-4:]
+        if not os.path.exists(floorRoiName):
+            #print("WRITING FLOOR ROI "+str(floorRoiName))
+            returnFloorRoi=rois[auxInd].copy()
+            returnFloorRoi[rois[auxInd]==True]=0
+            returnFloorRoi[rois[auxInd]==False]=255
+            cv2.imwrite(floorRoiName,returnFloorRoi)
+
         #cv2.imwrite(str(ch)+"ROI.jpg",rois[auxInd])
         #cv2.imwrite(str(ch)+"LABEL.jpg",y[auxInd])
         ch+=1
@@ -484,7 +494,6 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
                 # this used to be inside the if, which seemed wrong
                 test_x = norm_x[i]#test_x is now a list!!!!!!!!!!!!!!!!!!!!!
 
-
                 if ind==0:#only train the second unet once
 
                     train_y = toSingleList(y,i)
@@ -543,6 +552,9 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
 
             # Keep the results with higher probability
             pred_y[heatMap_y<heatMap_y2]=pred_y2[heatMap_y<heatMap_y2]
+
+            # Un-shift class names
+            pred_y+=1
 
             #write the results
             cv2.imwrite(case[ind][:-4]+"augm"+str(augment)+"decrease"+str(decreaseRead)+"ResultTH"+str(thRead)+".png",

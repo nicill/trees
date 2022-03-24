@@ -285,7 +285,7 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
 
     #NOW, ADD THE FLOOR TO THE ROI
     ch=0
-    for auxInd in range(len(rois)):
+    for auxInd in range(len(gt_names)):
         gtIm=y[auxInd]
         rois[auxInd][gtIm==0]=0
         # also, shift classes

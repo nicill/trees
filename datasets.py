@@ -183,7 +183,7 @@ class Cropping2DDataset(Dataset):
         #compute percentages
         totalRelevantPixels=0
         for c,pix,zero in self.labelStats: totalRelevantPixels+=pix
-        for x in self.labelStats: x[2]=100*x[1]/totalRelevantPixels
+        if totalRelevantPixels!=0: for x in self.labelStats: x[2]=100*x[1]/totalRelevantPixels
         print("STATS! "+str(self.labelStats))
 
         #now we know how many pixels are in the relevant classes

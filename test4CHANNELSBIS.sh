@@ -43,7 +43,7 @@ fi
 
 
 #try for different augmentations and decreases
-for a in 0 10 50
+for a in 0
 do
   for d in 0 25 50
   do
@@ -52,7 +52,7 @@ do
         echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^starting $a $d $th"
         date
 	if [[ $compute = 1 ]];then
-	        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -numC $chan -d $dataDir -e $epochs -labFus $conversion -aug $a -dec $d -th $th -u2 True -imp1 $i1 -unimp1 $ui1 -imp2 $i2 -unimp2 $ui2 -ign2 $ig2
+	        CUDA_VISIBLE_DEVICES=$GPU;python $softDir/tree_detection.py -numC $chan -d $dataDir -e $epochs -labFus $conversion -aug $a -dec $d -th $th -u2 False -imp1 $i1 -unimp1 $ui1 -imp2 $i2 -unimp2 $ui2 -ign2 $ig2
 	fi
 	if [[ $evaluate = 1 ]];then
 
@@ -71,8 +71,8 @@ do
 					outFile2=$dataDir/$f/$f"augm"$a"decrease"$d"ResultTH"$th"ONE.png"
 	  			        if [ -f "$outFile" ]; then
 						echo " $outFile exists"
-						python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $outFile $code $dataDir/$f/$f"ROIFLOOR.jpg">> $outDir"Criterion"$code"pref"$prefix".txt"
-						python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $outFile2 $code $dataDir/$f/$f"ROIFLOOR.jpg">> $outDir"Criterion"$code"pref"$prefix"ONE.txt"
+						python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $outFile $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix".txt"
+						python $softDir/evaluateSegmentationResults.py $dataDir/$f/$f"GT.png" $outFile2 $code $dataDir/$f/$f"ROI.jpg">> $outDir"Criterion"$code"pref"$prefix"ONE.txt"
 
 					fi
 			    fi

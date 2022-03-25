@@ -488,6 +488,8 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
             pred_z=pred_y.copy()
             pred_z[heatMap_y<probTH]=255
 
+            useSecondNet=bool(options["u2"])
+
             # now reclassify using second Unet
             if useSecondNet:
 
@@ -518,40 +520,35 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
                     testedTraining=net.test(d_train)
                     testedValid=net.test(d_train)
 
-                    #define datasets
-                    train_dataset2 = Cropping2DDataset(
-                    d_train, l_train, r_train, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
-                )
-                    val_dataset2 = Cropping2DDataset(
-                    d_val, l_val, r_val, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap
-                )
+                    try:
+                        #define datasets
+                        train_dataset2 = Cropping2DDataset(
+                        d_train, l_train, r_train, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap)
+                        val_dataset2 = Cropping2DDataset(
+                        d_val, l_val, r_val, numLabels=nClasses,important=important2, unimportant=unimportant2, ignore=ignore2,augment=augment,decrease=decrease, patch_size=patch_size, overlap=overlap)
+                        #define data loaders
+                        train_dataloader2 = DataLoader(train_dataset2, batch_size, True, num_workers=num_workers)
+                        val_dataloader2 = DataLoader(val_dataset2, batch_size, num_workers=num_workers)
+                        #train
+                        print("TRAINING SECOND MODEL!!!!!!!!!!!!")
+                        net2.fit(
+                        train_dataloader2,
+                        val_dataloader2,
+                        epochs=epochs,
+                        patience=patience, )
+                        # save the second model
+                        net2.save_model( model_name2)
+                    except:#
+                        useSecondNet=False
 
-                    #define data loaders
-                    train_dataloader2 = DataLoader(
-                    train_dataset2, batch_size, True, num_workers=num_workers
-                )
-                    val_dataloader2 = DataLoader(
-                    val_dataset2, batch_size, num_workers=num_workers
-                )
+            if useSecondNet:
+                #test!
+                yi2 = net2.test([test_x[ind]])
+                pred_y2 = np.argmax(yi2[0], axis=0)
+                heatMap_y2 = np.max(yi2[0], axis=0)
 
-                    #train
-                    print("TRAINING SECOND MODEL!!!!!!!!!!!!")
-                    net2.fit(
-                    train_dataloader2,
-                    val_dataloader2,
-                    epochs=epochs,
-                    patience=patience,
-            )
-                    # save the second model
-                    net2.save_model( model_name2)
-
-            #test!
-            yi2 = net2.test([test_x[ind]])
-            pred_y2 = np.argmax(yi2[0], axis=0)
-            heatMap_y2 = np.max(yi2[0], axis=0)
-
-            # Keep the results with higher probability
-            pred_y[heatMap_y<heatMap_y2]=pred_y2[heatMap_y<heatMap_y2]
+                # Keep the results with higher probability
+                pred_y[heatMap_y<heatMap_y2]=pred_y2[heatMap_y<heatMap_y2]
 
             # Un-shift class names
             pred_y+=1

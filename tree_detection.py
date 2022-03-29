@@ -148,7 +148,7 @@ def parse_inputs():
     parser.add_argument(
         '-t', '--patch-size',
         dest='patch_size',
-        type=int, default=128,
+        type=int, default=256,
         help='Patch size'
     )
     parser.add_argument(
@@ -388,7 +388,8 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
 
         val_split = 0.1
         batch_size = 8
-        patch_size = (256, 256)
+        patch_size = (int(options["patch_size"]), int(options["patch_size"]))
+        print("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEe "+str(patch_size))
         #patch_size = (64, 64)
         # overlap = (64, 64)
         overlap = (32, 32)

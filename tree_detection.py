@@ -367,6 +367,8 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
     training_start = time.time()
     print(cases)
     for i, case in enumerate(cases):
+        useSecondNet=bool(options["u2"])
+
         if verbose > 0:
             print(
                 '%s[%s]%s Starting training for mosaic %s %s(%d/%d)%s' %
@@ -487,8 +489,6 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
 
             pred_z=pred_y.copy()
             pred_z[heatMap_y<probTH]=255
-
-            useSecondNet=bool(options["u2"])
 
             # now reclassify using second Unet
             if useSecondNet:

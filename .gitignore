@@ -3,6 +3,7 @@ Data/
 output/
 OUTPUT/
 forMariano/
+Criterion/
 *.jpg
 *.png
 *.pyc

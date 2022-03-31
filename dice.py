@@ -89,7 +89,8 @@ def incorrectPercToI(gt,predicted,i):
     if totalIncorrect !=0 : return totalWrongToI/totalIncorrect
     else: return 1
 
-
+def confItoJ(gt,predicted,i,j):
+    return np.sum(np.logical_and(gt == i, predicted == j))
 
 #precision, how many of those predicted are correct
 def PrecisionLabelI(gt,predicted,i):# return the percentage of pixels of class i incorrectly matched over the total of positives

@@ -68,15 +68,6 @@ def main(argv):
             result.append(dice.pixelPercLabelI(gtMask.copy()[ROI],i))
             #print("******************************************* Class "+str(i)+"  Precision: "+str(result))
     elif code==8:# Evaluate correctly class in each class
-        mask[ROI==0]=255
-        result=[]
-        for i in range(1,numClasses+1):
-            result.append(dice.CorrectLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
-    elif code==9:# Evaluate correctly class in each class
-        result=[]
-        for i in range(1,numClasses+1):
-            result.append(dice.totalLabelI(gtMask.copy()[ROI],mask.copy()[ROI],i))
-    elif code==10:# Evaluate correctly class in each class
         result=[]
         for i in range(1,numClasses+1):
             for j in range(1,numClasses+1):

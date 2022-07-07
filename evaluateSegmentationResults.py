@@ -72,7 +72,7 @@ def main(argv):
         for i in range(1,numClasses+1):
             for j in range(1,numClasses+1):
                 result.append(dice.confItoJ(gtMask.copy()[ROI],mask.copy()[ROI],i,j))
-        print("with "+str(numClasses)+" got a list of length "+str(len(result)))
+        #print("with "+str(numClasses)+" got a list of length "+str(len(result)))
 
     if isinstance(result,list):
         for x in result:print(str(x)+str(" "),end="")

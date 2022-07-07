@@ -5,7 +5,7 @@ import re
 import cv2
 import time
 import numpy as np
-from skimage.transform import resize as imresize
+#from skimage.transform import resize as imresize
 from torch.utils.data import DataLoader
 from utils import color_codes, find_file
 from datasets import Cropping2DDataset
@@ -14,7 +14,7 @@ from metrics import hausdorf_distance, avg_euclidean_distance
 from metrics import matched_percentage
 from utils import list_from_mask
 #from osgeo import gdal
-#from postProcessing import readDEM
+from postProcessing import readDEM
 
 def toSingleList(aListOfLists,excludedIndex):
     returnList=[]
@@ -242,6 +242,7 @@ def train(cases, gt_names, roiNames, demNames, net_name, dictSitesMosaics, nClas
     else:codedUnImportant=[0,1,2,3] #actively decrease
     if options["ign1"] is not None: codedIgnore=extractClasses(options["ign1"])
     else: codedIgnore=[]
+    print(options)
     print("UNET 1: Important "+str(codedImportant)+" Unimportant: "+str(codedUnImportant)+" IGNORE: "+str(codedIgnore))
 
     #Unet2

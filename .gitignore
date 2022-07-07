@@ -4,7 +4,9 @@ output/
 OUTPUT/
 forMariano/
 Criterion/
+LUCAFLIGHTSWITHDEM/
 *.jpg
 *.png
 *.pyc
 *.tif
+*.zip

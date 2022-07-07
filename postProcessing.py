@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import cv2
 import os
-from osgeo import gdal
+#from osgeo import gdal
 
 #given a window, compute its average
 def averageWindow(window): return np.average(window)
@@ -36,6 +36,14 @@ def thresholdLowPixels(dem,th):
     return retVal
 
 def readDEM(file):
+
+    dem = cv2.imread(file,cv2.IMREAD_UNCHANGED)
+    if dem is None:raise Exception("no DEM at "+str(file))
+    return dem
+
+"""
+ABANDONED DUE TO GDALs inability to install normally (or my inability to understand how to do that)
+def readDEM(file):
     dem2 = gdal.Open(file, gdal.GA_ReadOnly)
     #for x in range(1, dem2.RasterCount + 1):
     #    band = dem2.GetRasterBand(x)
@@ -52,6 +60,7 @@ def readDEM(file):
     #print(maxDem)
     if dem is None:raise Exception("no DEM at "+str(file))
     return dem
+"""
 
 def demThresholdMask(dem,threshold):
     returnImage=dem.copy()
